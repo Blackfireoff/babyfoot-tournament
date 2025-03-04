@@ -6,7 +6,7 @@ Une application web pour la gestion de tournois de babyfoot, d'équipes, de matc
 
 Le projet est organisé en deux parties principales :
 - `backend` : Application FastAPI fournissant l'API
-- `frontend` : (À implémenter) Interface web pour l'application
+- `frontend` : Interface web React pour l'application
 
 ## Configuration du Backend
 
@@ -216,16 +216,84 @@ backend/
 ├── .env                      # Variables d'environnement
 ├── requirements.txt          # Dépendances Python
 └── run.py                    # Script pour exécuter l'application
+
+frontend/
+├── public/                   # Fichiers statiques
+├── src/
+│   ├── assets/               # Images et ressources
+│   ├── components/           # Composants React réutilisables
+│   ├── contexts/             # Contextes React (authentification, etc.)
+│   ├── hooks/                # Hooks personnalisés
+│   ├── pages/                # Pages de l'application
+│   ├── services/             # Services API
+│   ├── utils/                # Fonctions utilitaires
+│   ├── App.jsx               # Composant principal
+│   └── main.jsx              # Point d'entrée
+├── .env                      # Variables d'environnement
+├── package.json              # Dépendances npm
+└── vite.config.js            # Configuration de Vite
 ```
 
 ### Commandes Utiles
 
-- **Exécuter l'application** : `python run.py`
-- **Vérifier la connexion à la base de données** : `python check_db.py`
-- **Configurer SQLite** : `python setup_sqlite.py`
-- **Initialiser la base de données** : `python init_db.py`
-- **Créer une migration** : `alembic revision --autogenerate -m "description"`
-- **Appliquer les migrations** : `alembic upgrade head`
+- **Exécuter l'application complète** : `./start.sh` ou `start.bat`
+- **Exécuter le backend** : `cd backend && python run.py`
+- **Exécuter le frontend** : `cd frontend && npm run dev`
+- **Vérifier la connexion à la base de données** : `cd backend && python check_db.py`
+- **Configurer SQLite** : `cd backend && python setup_sqlite.py`
+- **Initialiser la base de données** : `cd backend && python init_db.py`
+- **Créer une migration** : `cd backend && alembic revision --autogenerate -m "description"`
+- **Appliquer les migrations** : `cd backend && alembic upgrade head`
+- **Construire le frontend pour la production** : `cd frontend && npm run build`
+
+## Configuration du Frontend
+
+### Prérequis
+
+- Node.js 18+
+- npm 9+
+
+### Installation
+
+1. Installez les dépendances :
+```bash
+cd frontend
+npm install
+```
+
+2. Créez un fichier `.env` dans le répertoire frontend avec les variables suivantes :
+```
+VITE_API_BASE_URL=http://localhost:8000/api
+```
+
+### Exécution de l'Application Frontend
+
+Démarrez le serveur de développement :
+```bash
+cd frontend
+npm run dev
+```
+
+L'interface web sera disponible à l'adresse http://localhost:5173
+
+## Démarrage de l'Application Complète
+
+### Sous Linux/macOS
+
+Utilisez le script de démarrage fourni :
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+### Sous Windows
+
+Utilisez le script batch fourni :
+```
+start.bat
+```
+
+Ces scripts démarrent à la fois le backend et le frontend.
 
 ## Licence
 

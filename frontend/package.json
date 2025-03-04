@@ -1,5 +1,5 @@
 {
-  "name": "babyfoot-tournament",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,10 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@tailwindcss/vite": "^4.0.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router": "^7.2.0",
     "react-router-dom": "^7.2.0",
+    "react-svg-pan-zoom": "^3.13.1",
+    "react-tournament-brackets": "^1.0.40",
+    "styled-components": "^6.1.15",
     "tailwindcss": "^4.0.9"
   },
   "devDependencies": {
