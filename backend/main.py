@@ -19,10 +19,11 @@ app = FastAPI(title="BabyFoot Tournament API")
 # Configuration CORS pour permettre les requêtes du frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En production, spécifiez l'origine exacte
+    allow_origins=["*"],  # Autoriser toutes les origines en développement
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Routes pour l'authentification
@@ -276,19 +277,51 @@ async def start_tournament(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    db_tournament = crud.get_tournament(db, tournament_id=tournament_id)
-    if db_tournament is None:
-        raise HTTPException(status_code=404, detail="Tournament not found")
-    
-    # Vérifier que l'utilisateur est le propriétaire du tournoi
-    if db_tournament.owner_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    matches = crud.start_tournament(db=db, tournament_id=tournament_id)
-    if not matches:
-        raise HTTPException(status_code=400, detail="Failed to start tournament")
-    
-    return {"message": "Tournament started successfully", "matches": matches}
+    try:
+        db_tournament = crud.get_tournament(db, tournament_id=tournament_id)
+        if db_tournament is None:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        
+        # Vérifier que l'utilisateur est le propriétaire du tournoi
+        if db_tournament.owner_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Vérifier que le tournoi est en statut "open"
+        if db_tournament.status != "open":
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Tournament cannot be started because it is in '{db_tournament.status}' status"
+            )
+        
+        # Vérifier qu'il y a au moins une équipe
+        if len(db_tournament.teams) < 1:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tournament cannot be started with less than 1 team"
+            )
+        
+        matches = crud.start_tournament(db=db, tournament_id=tournament_id)
+        if not matches:
+            raise HTTPException(
+                status_code=400, 
+                detail="Failed to start tournament. No matches were created."
+            )
+        
+        return {"message": "Tournament started successfully", "matches": matches}
+    except HTTPException:
+        # Relancer les exceptions HTTP déjà formatées
+        raise
+    except Exception as e:
+        # Journaliser l'erreur pour le débogage
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error starting tournament: {str(e)}\n{error_details}")
+        
+        # Renvoyer une erreur plus détaillée
+        raise HTTPException(
+            status_code=500, 
+            detail=f"An error occurred while starting the tournament: {str(e)}"
+        )
 
 # Routes pour les matchs
 @app.get("/api/tournaments/{tournament_id}/matches", response_model=List[schemas.Match])
@@ -307,11 +340,48 @@ async def update_match_score(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    db_match = crud.get_match(db, match_id=match_id)
-    if db_match is None:
-        raise HTTPException(status_code=404, detail="Match not found")
+    try:
+        db_match = crud.get_match(db, match_id=match_id)
+        if db_match is None:
+            raise HTTPException(status_code=404, detail="Match not found")
+        
+        # Vérifier que le tournoi existe
+        tournament_id = db_match.tournament_id
+        db_tournament = crud.get_tournament(db, tournament_id=tournament_id)
+        if db_tournament is None:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        
+        # Vérifier que l'utilisateur est autorisé à modifier ce match
+        # (propriétaire du tournoi ou administrateur)
+        if db_tournament.owner_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Vérifier que le tournoi est en cours
+        if db_tournament.status != "in_progress":
+            raise HTTPException(status_code=400, detail="Tournament is not in progress")
+        
+        # Vérifier que les scores sont valides
+        if team1_score < 0 or team2_score < 0:
+            raise HTTPException(status_code=400, detail="Scores cannot be negative")
+        
+        # Mettre à jour le score
+        updated_match = crud.update_match_score(db=db, match_id=match_id, team1_score=team1_score, team2_score=team2_score)
+        return updated_match
     
-    return crud.update_match_score(db=db, match_id=match_id, team1_score=team1_score, team2_score=team2_score)
+    except ValueError as e:
+        # Capturer les erreurs de validation de la fonction crud
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Journaliser l'erreur pour le débogage
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error updating match score: {str(e)}\n{error_details}")
+        
+        # Renvoyer une erreur plus détaillée
+        raise HTTPException(
+            status_code=500, 
+            detail=f"An error occurred while updating the match score: {str(e)}"
+        )
 
 # Routes pour le classement
 @app.get("/api/scoreboard/teams", response_model=List[schemas.ScoreboardTeam])

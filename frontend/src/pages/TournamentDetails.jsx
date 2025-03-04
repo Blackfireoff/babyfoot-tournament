@@ -120,24 +120,63 @@ function TournamentDetails() {
     }
     
     try {
-      await tournamentService.startTournament(tournament.id);
-      fetchTournament(); // Recharger les données du tournoi
+      setError(null);
+      const result = await tournamentService.startTournament(tournament.id);
+      console.log("Tournoi démarré avec succès:", result);
+      
+      // Attendre un court instant pour permettre au backend de traiter les données
+      setTimeout(() => {
+        fetchTournament(); // Recharger les données du tournoi
+      }, 1000);
     } catch (err) {
       console.error('Error starting tournament:', err);
-      alert('Impossible de démarrer le tournoi. Veuillez réessayer plus tard.');
+      setError(`Impossible de démarrer le tournoi: ${err.message || 'Erreur inconnue'}`);
     }
   };
 
   const handleUpdateScore = async (matchId, team1Score, team2Score) => {
     try {
+      setError(null);
       await tournamentService.updateMatchScore(matchId, team1Score, team2Score);
       // Recharger les données complètes du tournoi, y compris les matchs mis à jour
       await fetchTournament();
-      // Afficher un message de succès
-      alert('Score mis à jour avec succès !');
+      // Afficher un message de succès temporaire
+      const successMessage = document.createElement('div');
+      successMessage.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+      successMessage.innerHTML = '<strong>Succès!</strong> Score mis à jour avec succès.';
+      document.body.appendChild(successMessage);
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
     } catch (err) {
       console.error('Error updating match score:', err);
-      alert('Impossible de mettre à jour le score. Veuillez réessayer plus tard.');
+      
+      // Afficher un message d'erreur plus précis
+      let errorMessage = 'Impossible de mettre à jour le score.';
+      
+      if (err.message) {
+        if (err.message.includes('match précédent')) {
+          errorMessage = err.message;
+        } else if (err.message.includes('équipes manquantes')) {
+          errorMessage = 'Impossible de mettre à jour le score : une ou plusieurs équipes manquantes.';
+        } else if (err.message.includes('permissions')) {
+          errorMessage = 'Vous n\'avez pas les permissions nécessaires pour mettre à jour ce match.';
+        } else if (err.message.includes('not in progress')) {
+          errorMessage = 'Le tournoi n\'est pas en cours. Impossible de mettre à jour les scores.';
+        } else {
+          errorMessage = `Erreur: ${err.message}`;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Faire défiler jusqu'au message d'erreur
+      setTimeout(() => {
+        const errorElement = document.querySelector('[role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
   };
 
@@ -158,7 +197,7 @@ function TournamentDetails() {
                 {new Date(tournament.startDate).toLocaleDateString('fr-FR')} - {tournament.endDate && new Date(tournament.endDate).toLocaleDateString('fr-FR')}
               </p>
             </div>
-            {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 2 && (
+            {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 1 && (
               <button
                 onClick={handleStartTournament}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -293,7 +332,8 @@ function TournamentDetails() {
                           match={match} 
                           team1={team1} 
                           team2={team2} 
-                          onUpdateScore={handleUpdateScore} 
+                          onUpdateScore={handleUpdateScore}
+                          allMatches={tournament.matches}
                         />
                       );
                     })}

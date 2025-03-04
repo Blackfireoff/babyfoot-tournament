@@ -152,6 +152,29 @@ const TournamentBracket = ({ tournament }) => {
         matchesByRound[match.round].push(match);
       });
       
+      // Fonction pour vérifier si tous les matchs précédents d'un match sont terminés
+      const arePreviousMatchesComplete = (match) => {
+        if (match.round === 1) return true; // Premier tour, pas de matchs précédents
+        
+        // Calculer les numéros des matchs précédents
+        const prevRound = match.round - 1;
+        const matchNum = match.match_number;
+        const prevMatchNum1 = matchNum * 2 - 1;
+        const prevMatchNum2 = matchNum * 2;
+        
+        // Vérifier que ces matchs existent et sont terminés
+        const prevMatches = tournamentData.matches.filter(m => 
+          m.round === prevRound && 
+          (m.match_number === prevMatchNum1 || m.match_number === prevMatchNum2)
+        );
+        
+        // Si on ne trouve pas les matchs précédents, on considère qu'ils ne sont pas terminés
+        if (prevMatches.length === 0) return false;
+        
+        // Vérifier que tous les matchs précédents ont des scores
+        return prevMatches.every(m => m.team1_score !== null && m.team2_score !== null);
+      };
+      
       // Vérifier si tous les matchs du premier tour sont terminés
       const round1Matches = matchesByRound[1] || [];
       const allRound1MatchesCompleted = round1Matches.length > 0 && 
@@ -187,6 +210,45 @@ const TournamentBracket = ({ tournament }) => {
         }
       }
       
+      // Auto-valider les matchs avec une seule équipe
+      for (const round in matchesByRound) {
+        matchesByRound[round].forEach(match => {
+          // Si un match a une équipe mais pas l'autre, auto-valider
+          if ((match.team1_id && !match.team2_id) || (!match.team1_id && match.team2_id)) {
+            // Déterminer quelle équipe est présente
+            const winningTeamId = match.team1_id || match.team2_id;
+            const isTeam1 = !!match.team1_id;
+            
+            // Définir les scores pour auto-valider (1-0 ou 0-1)
+            match.team1_score = isTeam1 ? 1 : 0;
+            match.team2_score = isTeam1 ? 0 : 1;
+            
+            // Propager le gagnant au tour suivant si ce n'est pas déjà fait
+            const nextRound = parseInt(round) + 1;
+            const nextMatchNumber = Math.ceil(match.match_number / 2);
+            
+            // Vérifier si le tour suivant existe
+            if (matchesByRound[nextRound]) {
+              const nextMatch = matchesByRound[nextRound].find(m => m.match_number === nextMatchNumber);
+              if (nextMatch) {
+                // Déterminer si l'équipe gagnante doit être placée en team1 ou team2
+                if (match.match_number % 2 === 1) {
+                  // Match impair, placer en team1
+                  if (!nextMatch.team1_id) {
+                    nextMatch.team1_id = winningTeamId;
+                  }
+                } else {
+                  // Match pair, placer en team2
+                  if (!nextMatch.team2_id) {
+                    nextMatch.team2_id = winningTeamId;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
       // Traiter chaque tour
       for (let round = 1; round <= rounds; round++) {
         const roundMatches = matchesByRound[round] || [];
@@ -210,6 +272,9 @@ const TournamentBracket = ({ tournament }) => {
             // Normaliser l'ID du match pour s'assurer qu'il est compatible avec la bibliothèque
             const normalizedMatchId = normalizeMatchId(match.id, round, match.match_number);
             
+            // Vérifier si on peut afficher les scores (matchs précédents terminés)
+            const canShowScores = match.round === 1 || arePreviousMatchesComplete(match);
+            
             allMatches.push({
               id: normalizedMatchId,
               originalId: match.id, // Conserver l'ID original pour les références
@@ -217,22 +282,22 @@ const TournamentBracket = ({ tournament }) => {
               nextMatchId: nextMatchId,
               tournamentRoundText: `${round}`,
               startTime: '',
-              state: match.team1_score !== null ? 'DONE' : 'SCHEDULED',
+              state: canShowScores && match.team1_score !== null ? 'DONE' : 'SCHEDULED',
               participants: [
                 {
                   id: team1 ? team1.id : `empty-${index*2}`,
                   name: team1 ? team1.name : 'À déterminer',
-                  isWinner: match.team1_score !== null && match.team2_score !== null && match.team1_score > match.team2_score,
+                  isWinner: canShowScores && match.team1_score !== null && match.team2_score !== null && match.team1_score > match.team2_score,
                   status: team1 ? null : 'NO_SHOW',
-                  resultText: match.team1_score !== null ? `${match.team1_score}` : '',
+                  resultText: canShowScores && match.team1_score !== null ? `${match.team1_score}` : '',
                   logo: team1 ? team1.logo : null,
                 },
                 {
                   id: team2 ? team2.id : `empty-${index*2+1}`,
                   name: team2 ? team2.name : 'À déterminer',
-                  isWinner: match.team1_score !== null && match.team2_score !== null && match.team2_score > match.team1_score,
+                  isWinner: canShowScores && match.team1_score !== null && match.team2_score !== null && match.team2_score > match.team1_score,
                   status: team2 ? null : 'NO_SHOW',
-                  resultText: match.team2_score !== null ? `${match.team2_score}` : '',
+                  resultText: canShowScores && match.team2_score !== null ? `${match.team2_score}` : '',
                   logo: team2 ? team2.logo : null,
                 },
               ],
