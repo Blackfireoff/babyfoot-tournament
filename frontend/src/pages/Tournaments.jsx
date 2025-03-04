@@ -175,22 +175,6 @@ function Tournaments() {
                             </button>
                           </div>
                         )}
-                        {tournament.status === 'in_progress' && (
-                          <Link
-                            to={`/tournaments/${tournament.id}`}
-                            className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium leading-4 text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                          >
-                            Voir le bracket
-                          </Link>
-                        )}
-                        {tournament.status === 'open' && (
-                          <Link
-                            to={`/tournaments/${tournament.id}`}
-                            className="ml-4 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium leading-4 text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                          >
-                            Voir le bracket
-                          </Link>
-                        )}
                       </td>
                     </tr>
                   ))}
