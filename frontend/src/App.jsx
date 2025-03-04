@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Teams from './pages/Teams';
 import Tournaments from './pages/Tournaments';
 import TournamentDetails from './pages/TournamentDetails';
+import CreateTournament from './pages/CreateTournament';
 import Scoreboard from './pages/Scoreboard';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
@@ -166,6 +167,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Tournaments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tournaments/create"
+              element={
+                <ProtectedRoute>
+                  <CreateTournament />
                 </ProtectedRoute>
               }
             />

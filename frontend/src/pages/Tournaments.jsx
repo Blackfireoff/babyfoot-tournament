@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { tournamentService, teamService } from '../services/api';
+import { tournamentService, teamService, userService } from '../services/api';
 
 function Tournaments() {
   const [tournaments, setTournaments] = useState([]);
@@ -21,7 +21,7 @@ function Tournaments() {
   const fetchTournaments = async () => {
     setLoading(true);
     try {
-      const data = await tournamentService.getAllTournaments();
+      const data = await tournamentService.getTournaments();
       setTournaments(data);
     } catch (err) {
       console.error('Error fetching tournaments:', err);
@@ -35,7 +35,7 @@ function Tournaments() {
     if (!user) return;
     
     try {
-      const teams = await teamService.getUserTeams(user.id);
+      const teams = await userService.getUserTeams(user.id);
       setUserTeams(teams);
     } catch (err) {
       console.error('Error fetching user teams:', err);
@@ -118,6 +118,16 @@ function Tournaments() {
             Consultez et rejoignez les tournois en cours
           </p>
         </div>
+        {user && (
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <Link
+              to="/tournaments/create"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+            >
+              Créer un tournoi
+            </Link>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -172,7 +182,7 @@ function Tournaments() {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {tournament.teams.length} / {tournament.maxTeams} équipes
+                          {tournament.teams.length} / {tournament.max_teams} équipes
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                           {tournament.status === 'open' && user && (

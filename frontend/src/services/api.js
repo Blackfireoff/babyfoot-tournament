@@ -4,10 +4,28 @@ const API_URL = 'http://localhost:8000/api';
 // Fonction utilitaire pour gérer les erreurs de fetch
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
+    const errorData = await response.json().catch(() => ({
       detail: `Erreur HTTP: ${response.status}`
     }));
-    throw new Error(error.detail || 'Une erreur est survenue');
+    
+    // Formater le message d'erreur pour qu'il soit plus lisible
+    let errorMessage = errorData.detail || 'Une erreur est survenue';
+    
+    // Si c'est une erreur de validation (422), essayer d'extraire les détails
+    if (response.status === 422 && errorData.detail) {
+      if (typeof errorData.detail === 'object') {
+        // Si detail est un objet, essayer de le formater
+        try {
+          errorMessage = Object.entries(errorData.detail)
+            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+            .join('; ');
+        } catch (e) {
+          console.error('Erreur lors du formatage des détails d\'erreur:', e);
+        }
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
   return response.json();
 };

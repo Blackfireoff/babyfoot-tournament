@@ -20,7 +20,7 @@ function TournamentDetails() {
     setLoading(true);
     setError(null);
     try {
-      const data = await tournamentService.getTournamentById(parseInt(id));
+      const data = await tournamentService.getTournament(parseInt(id));
       setTournament(data);
     } catch (err) {
       console.error('Error fetching tournament:', err);
@@ -153,7 +153,7 @@ function TournamentDetails() {
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Nombre d'équipes</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {tournament.teams.length} / {tournament.maxTeams}
+                {tournament.teams.length} / {tournament.max_teams}
               </dd>
             </div>
             {tournament.ownerId && (
