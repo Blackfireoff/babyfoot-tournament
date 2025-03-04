@@ -91,7 +91,7 @@ function Tournaments() {
       case 'in_progress':
         return 'En cours';
       case 'closed':
-        return 'Inscriptions closes';
+        return 'Tournoi terminé';
       default:
         return status;
     }
