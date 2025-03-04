@@ -18,6 +18,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_admin = Column(Boolean, default=False)
 
     # Relations
     teams = relationship("Team", back_populates="owner")
@@ -58,10 +59,12 @@ class Tournament(Base):
     date = Column(String)
     status = Column(String, default="open")  # 'open', 'upcoming', 'in_progress', 'closed'
     max_teams = Column(Integer)
+    owner_id = Column(Integer, ForeignKey("users.id"))
 
     # Relations
     teams = relationship("Team", secondary=tournament_team, back_populates="tournaments")
     matches = relationship("Match", back_populates="tournament", cascade="all, delete-orphan")
+    owner = relationship("User", backref="tournaments")
 
 class Match(Base):
     __tablename__ = "matches"

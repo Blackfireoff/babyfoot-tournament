@@ -191,7 +191,7 @@ async def create_tournament(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_tournament(db=db, tournament=tournament)
+    return crud.create_tournament(db=db, tournament=tournament, user_id=current_user.id)
 
 @app.put("/api/tournaments/{tournament_id}", response_model=schemas.Tournament)
 async def update_tournament(

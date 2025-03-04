@@ -123,8 +123,8 @@ def get_tournament(db: Session, tournament_id: int):
 def get_tournaments(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Tournament).offset(skip).limit(limit).all()
 
-def create_tournament(db: Session, tournament: schemas.TournamentCreate):
-    db_tournament = models.Tournament(**tournament.dict(), status="open")
+def create_tournament(db: Session, tournament: schemas.TournamentCreate, user_id: int):
+    db_tournament = models.Tournament(**tournament.dict(), status="open", owner_id=user_id)
     db.add(db_tournament)
     db.commit()
     db.refresh(db_tournament)

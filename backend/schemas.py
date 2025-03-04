@@ -52,6 +52,7 @@ class UserUpdate(BaseModel):
 class User(UserBase):
     id: int
     teams: List[Team] = []
+    is_admin: bool = False
 
     class Config:
         orm_mode = True
@@ -75,6 +76,7 @@ class TournamentCreate(TournamentBase):
 class Tournament(TournamentBase):
     id: int
     status: str
+    owner_id: int
     teams: List[TournamentTeam] = []
 
     class Config:
