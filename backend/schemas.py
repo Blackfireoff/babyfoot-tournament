@@ -49,7 +49,7 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     id: int
-    teams: List[int] = []
+    teams: List[Team] = []
 
     class Config:
         orm_mode = True

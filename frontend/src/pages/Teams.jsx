@@ -1,115 +1,164 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { teamService, userService } from '../services/api';
 
 function Teams() {
-  const [teams, setTeams] = useState([
-    {
-      id: 1,
-      name: 'Les Champions',
-      ownerId: 1, // ID de l'utilisateur propriétaire
-      players: [
-        { id: 1, name: 'John Doe', isStarter: true },
-        { id: 2, name: 'Jane Smith', isStarter: true },
-        { id: 3, name: 'Mike Johnson', isStarter: false },
-      ],
-    },
-    {
-      id: 2,
-      name: 'ss',
-      ownerId: 2, // Équipe d'un autre utilisateur
-      players: [
-        { id: 4, name: 'ss', isStarter: true },
-      ],
-    },
-  ]);
-  
-  // Simuler l'utilisateur connecté
-  const currentUserId = 1; // Dans une vraie application, cela viendrait du contexte d'authentification
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
   
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [viewMode, setViewMode] = useState('all'); // 'all' ou 'mine'
 
-  // Filtrer les équipes selon le mode d'affichage
-  const filteredTeams = viewMode === 'mine' 
-    ? teams.filter(team => team.ownerId === currentUserId)
-    : teams;
+  useEffect(() => {
+    fetchTeams();
+  }, [viewMode]);
 
-  const handleCreateTeam = (e) => {
+  const fetchTeams = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let fetchedTeams;
+      if (viewMode === 'mine' && user) {
+        fetchedTeams = await userService.getUserTeams(user.id);
+      } else {
+        fetchedTeams = await teamService.getTeams();
+      }
+      setTeams(fetchedTeams);
+    } catch (err) {
+      console.error('Error fetching teams:', err);
+      setError('Impossible de charger les équipes. Veuillez réessayer plus tard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtrer les équipes selon le mode d'affichage
+  const filteredTeams = teams;
+
+  const handleCreateTeam = async (e) => {
     e.preventDefault();
     if (!newTeamName) return;
 
-    const newTeam = {
-      id: teams.length + 1,
-      name: newTeamName,
-      ownerId: currentUserId, // Assigner l'équipe à l'utilisateur actuel
-      players: [],
-    };
-
-    setTeams([...teams, newTeam]);
-    setNewTeamName('');
-    setShowCreateTeam(false);
+    try {
+      const newTeam = await teamService.createTeam({
+        name: newTeamName
+      });
+      
+      setTeams([...teams, newTeam]);
+      setNewTeamName('');
+      setShowCreateTeam(false);
+    } catch (err) {
+      console.error('Error creating team:', err);
+      alert('Impossible de créer l\'équipe. Veuillez réessayer plus tard.');
+    }
   };
 
-  const handleAddPlayer = (teamId) => {
+  const handleAddPlayer = async (teamId) => {
     if (!newPlayerName) return;
 
-    const newPlayer = {
-      id: Math.max(...teams.flatMap(team => team.players.map(p => p.id)), 0) + 1,
-      name: newPlayerName,
-      isStarter: false,
-    };
+    try {
+      const newPlayer = await teamService.addPlayer(teamId, {
+        name: newPlayerName,
+        is_starter: false
+      });
 
-    setTeams(teams.map(team => {
-      if (team.id === teamId) {
-        return {
-          ...team,
-          players: [...team.players, newPlayer],
-        };
-      }
-      return team;
-    }));
-
-    setNewPlayerName('');
-  };
-
-  const togglePlayerStarter = (teamId, playerId) => {
-    setTeams(teams.map(team => {
-      if (team.id === teamId) {
-        const starters = team.players.filter(p => p.isStarter);
-        const player = team.players.find(p => p.id === playerId);
-        
-        if (starters.length >= 2 && !player.isStarter) {
-          return team; // Ne pas permettre plus de 2 titulaires
+      setTeams(teams.map(team => {
+        if (team.id === teamId) {
+          return {
+            ...team,
+            players: [...team.players, newPlayer],
+          };
         }
+        return team;
+      }));
 
-        return {
-          ...team,
-          players: team.players.map(p => {
-            if (p.id === playerId) {
-              return { ...p, isStarter: !p.isStarter };
-            }
-            return p;
-          }),
-        };
-      }
-      return team;
-    }));
+      setNewPlayerName('');
+    } catch (err) {
+      console.error('Error adding player:', err);
+      alert('Impossible d\'ajouter le joueur. Veuillez réessayer plus tard.');
+    }
   };
 
-  const handleDeleteTeam = (teamId) => {
-    // Vérifier si l'utilisateur est le propriétaire de l'équipe
-    const team = teams.find(t => t.id === teamId);
-    if (team && team.ownerId === currentUserId) {
+  const togglePlayerStarter = async (teamId, playerId) => {
+    try {
+      const team = teams.find(t => t.id === teamId);
+      if (!team) return;
+      
+      const player = team.players.find(p => p.id === playerId);
+      if (!player) return;
+      
+      const starters = team.players.filter(p => p.is_starter);
+      
+      // Ne pas permettre plus de 2 titulaires
+      if (starters.length >= 2 && !player.is_starter) {
+        alert("Une équipe ne peut pas avoir plus de 2 titulaires.");
+        return;
+      }
+
+      const updatedPlayer = await teamService.updatePlayer(teamId, playerId, {
+        ...player,
+        is_starter: !player.is_starter
+      });
+
+      setTeams(teams.map(team => {
+        if (team.id === teamId) {
+          return {
+            ...team,
+            players: team.players.map(p => {
+              if (p.id === playerId) {
+                return updatedPlayer;
+              }
+              return p;
+            }),
+          };
+        }
+        return team;
+      }));
+    } catch (err) {
+      console.error('Error updating player:', err);
+      alert('Impossible de modifier le statut du joueur. Veuillez réessayer plus tard.');
+    }
+  };
+
+  const handleDeleteTeam = async (teamId) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette équipe ?")) {
+      return;
+    }
+    
+    try {
+      await teamService.deleteTeam(teamId);
       setTeams(teams.filter(t => t.id !== teamId));
-    } else {
-      alert("Vous ne pouvez pas supprimer une équipe qui ne vous appartient pas.");
+    } catch (err) {
+      console.error('Error deleting team:', err);
+      alert('Impossible de supprimer l\'équipe. Veuillez réessayer plus tard.');
     }
   };
 
   const toggleViewMode = () => {
     setViewMode(viewMode === 'all' ? 'mine' : 'all');
   };
+
+  if (loading && teams.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white shadow-md rounded-lg overflow-hidden p-8 text-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-8 w-64 bg-gray-200 rounded mb-4"></div>
+            <div className="h-4 w-32 bg-gray-200 rounded mb-8"></div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 w-full">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-100 h-48 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -140,6 +189,12 @@ function Teams() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="px-6 py-4 bg-red-50 border-b border-red-200">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
 
         {showCreateTeam && (
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
@@ -207,7 +262,7 @@ function Teams() {
                   <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg leading-6 font-medium text-gray-900">{team.name}</h3>
-                      {team.ownerId === currentUserId && (
+                      {user && team.owner_id === user.id && (
                         <button
                           onClick={() => handleDeleteTeam(team.id)}
                           className="text-red-600 hover:text-red-900 text-sm font-medium"
@@ -217,7 +272,7 @@ function Teams() {
                       )}
                     </div>
                     <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                      {team.ownerId === currentUserId ? 'Votre équipe' : 'Équipe d\'un autre utilisateur'}
+                      {user && team.owner_id === user.id ? 'Votre équipe' : 'Équipe d\'un autre utilisateur'}
                     </p>
                   </div>
                   <div className="px-4 py-5 sm:p-6">
@@ -226,25 +281,25 @@ function Teams() {
                       {team.players.map((player) => (
                         <div key={player.id} className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${player.isStarter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                            <span className={player.isStarter ? 'font-medium text-gray-900' : 'text-gray-600'}>
+                            <div className={`w-2 h-2 rounded-full mr-2 ${player.is_starter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <span className={player.is_starter ? 'font-medium text-gray-900' : 'text-gray-600'}>
                               {player.name}
-                              {player.isStarter && ' (Titulaire)'}
+                              {player.is_starter && ' (Titulaire)'}
                             </span>
                           </div>
-                          {team.ownerId === currentUserId && (
+                          {user && team.owner_id === user.id && (
                             <button
                               onClick={() => togglePlayerStarter(team.id, player.id)}
                               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                             >
-                              {player.isStarter ? 'Rétrograder' : 'Promouvoir'}
+                              {player.is_starter ? 'Rétrograder' : 'Promouvoir'}
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
                     
-                    {team.ownerId === currentUserId && (
+                    {user && team.owner_id === user.id && (
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();

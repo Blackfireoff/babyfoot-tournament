@@ -1,5 +1,5 @@
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useAuth } from './contexts/AuthContext';
 
 // Pages
 import Home from './pages/Home';
@@ -12,7 +12,24 @@ import Scoreboard from './pages/Scoreboard';
 import Profile from './pages/Profile';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, logout, loading } = useAuth();
+
+  // Fonction pour protéger les routes
+  const ProtectedRoute = ({ children }) => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+    
+    if (!user) {
+      return <Navigate to="/login" />;
+    }
+    
+    return children;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -26,7 +43,7 @@ function App() {
                   BabyFoot Tournaments
                 </Link>
               </div>
-              {isAuthenticated && (
+              {user && (
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                   <Link
                     to="/teams"
@@ -56,13 +73,18 @@ function App() {
               )}
             </div>
             <div className="flex items-center">
-              {isAuthenticated ? (
-                <button
-                  onClick={() => setIsAuthenticated(false)}
-                  className="ml-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                >
-                  Déconnexion
-                </button>
+              {user ? (
+                <div className="flex items-center">
+                  <span className="mr-4 text-sm text-gray-700">
+                    Bonjour, {user.username || 'Utilisateur'}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="ml-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Déconnexion
+                  </button>
+                </div>
               ) : (
                 <div className="space-x-4">
                   <Link
@@ -86,31 +108,53 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/teams"
-            element={isAuthenticated ? <Teams /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/tournaments"
-            element={isAuthenticated ? <Tournaments /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/tournaments/:id"
-            element={isAuthenticated ? <TournamentDetails /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/scoreboard"
-            element={isAuthenticated ? <Scoreboard /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/profile"
-            element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
-          />
-        </Routes>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/teams"
+              element={
+                <ProtectedRoute>
+                  <Teams />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tournaments"
+              element={
+                <ProtectedRoute>
+                  <Tournaments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tournaments/:id"
+              element={
+                <ProtectedRoute>
+                  <TournamentDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scoreboard"
+              element={<Scoreboard />}
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        )}
       </main>
     </div>
   );

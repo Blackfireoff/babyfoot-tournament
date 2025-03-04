@@ -1,22 +1,41 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-function Login({ setIsAuthenticated }) {
+function Login() {
   const navigate = useNavigate();
+  const { login, error: authError } = useAuth();
+  
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement actual authentication
-    if (formData.email && formData.password) {
-      setIsAuthenticated(true);
-      navigate('/teams');
-    } else {
+    setError('');
+    setIsLoading(true);
+    
+    if (!formData.username || !formData.password) {
       setError('Veuillez remplir tous les champs');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const success = await login(formData.username, formData.password);
+      if (success) {
+        navigate('/teams');
+      } else {
+        setError(authError || 'Erreur de connexion');
+      }
+    } catch (err) {
+      setError('Une erreur est survenue lors de la connexion');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -42,24 +61,24 @@ function Login({ setIsAuthenticated }) {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
+          {(error || authError) && (
             <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
+              <div className="text-sm text-red-700">{error || authError}</div>
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Adresse email
+              <label htmlFor="username" className="sr-only">
+                Nom d'utilisateur
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="username"
+                name="username"
+                type="text"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Adresse email"
-                value={formData.email}
+                placeholder="Nom d'utilisateur"
+                value={formData.username}
                 onChange={handleChange}
               />
             </div>
@@ -103,9 +122,10 @@ function Login({ setIsAuthenticated }) {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400"
             >
-              Se connecter
+              {isLoading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
           </div>
         </form>

@@ -319,6 +319,10 @@ async def get_player_rankings(db: Session = Depends(get_db)):
     return crud.get_player_rankings(db=db)
 
 # Routes pour le profil utilisateur
+@app.get("/api/users", response_model=List[schemas.User])
+async def get_users(db: Session = Depends(get_db)):
+    return crud.get_users(db)
+
 @app.get("/api/users/{user_id}", response_model=schemas.User)
 async def get_user_profile(
     user_id: int, 

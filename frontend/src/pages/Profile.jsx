@@ -1,28 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { userService } from '../services/api';
 
 function Profile() {
-  const [user] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    teams: ['Les Champions', 'Les Titans'],
+  const { user } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [userTeams, setUserTeams] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    victories: 0,
+    matchesPlayed: 0,
+    pointsScored: 0
   });
 
-  const [upcomingMatches] = useState([
-    {
-      id: 1,
-      tournament: 'Tournoi du Printemps',
-      opponent: 'Les Invincibles',
-      date: '2024-04-15T14:00:00',
-      team: 'Les Champions',
-    },
-    {
-      id: 2,
-      tournament: 'Coupe d\'Été',
-      opponent: 'Les Warriors',
-      date: '2024-07-01T16:00:00',
-      team: 'Les Titans',
-    },
-  ]);
+  useEffect(() => {
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
+
+  const fetchUserData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Charger le profil utilisateur
+      const profileData = await userService.getUserProfile(user.id);
+      setProfile(profileData);
+
+      // Charger les équipes de l'utilisateur
+      const teamsData = await userService.getUserTeams(user.id);
+      setUserTeams(teamsData);
+
+      // Charger les matchs de l'utilisateur
+      const matchesData = await userService.getUserMatches(user.id);
+      
+      // Filtrer les matchs à venir (date future)
+      const now = new Date();
+      const upcoming = matchesData.filter(match => new Date(match.date) > now);
+      setUpcomingMatches(upcoming);
+
+      // Calculer les statistiques
+      const victories = matchesData.filter(match => {
+        const isTeam1 = match.team1Id === user.id;
+        return isTeam1 ? match.team1Score > match.team2Score : match.team2Score > match.team1Score;
+      }).length;
+
+      const pointsScored = matchesData.reduce((total, match) => {
+        const isTeam1 = match.team1Id === user.id;
+        return total + (isTeam1 ? match.team1Score : match.team2Score);
+      }, 0);
+
+      setStats({
+        victories,
+        matchesPlayed: matchesData.length,
+        pointsScored
+      });
+
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      setError('Impossible de charger les données utilisateur. Veuillez réessayer plus tard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-48 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Erreur!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Attention!</strong>
+          <span className="block sm:inline"> Profil non trouvé.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,29 +112,33 @@ function Profile() {
             <div className="mt-5 border-t border-gray-200">
               <dl className="divide-y divide-gray-200">
                 <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt className="text-sm font-medium text-gray-500">Nom complet</dt>
+                  <dt className="text-sm font-medium text-gray-500">Nom d'utilisateur</dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {user.name}
+                    {profile.username}
                   </dd>
                 </div>
                 <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {user.email}
+                    {profile.email}
                   </dd>
                 </div>
                 <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
                   <dt className="text-sm font-medium text-gray-500">Équipes</dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
-                      {user.teams.map((team) => (
-                        <li key={team} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                          <div className="w-0 flex-1 flex items-center">
-                            <span className="ml-2 flex-1 w-0 truncate">{team}</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                    {userTeams.length === 0 ? (
+                      <p className="text-gray-500">Vous n'avez pas encore d'équipe.</p>
+                    ) : (
+                      <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
+                        {userTeams.map((team) => (
+                          <li key={team.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
+                            <div className="w-0 flex-1 flex items-center">
+                              <span className="ml-2 flex-1 w-0 truncate">{team.name}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -74,27 +154,31 @@ function Profile() {
             </h3>
             <div className="mt-5">
               <div className="flow-root">
-                <ul role="list" className="-my-5 divide-y divide-gray-200">
-                  {upcomingMatches.map((match) => (
-                    <li key={match.id} className="py-5">
-                      <div className="relative focus-within:ring-2 focus-within:ring-blue-500">
-                        <h3 className="text-sm font-semibold text-gray-800">
-                          <span className="absolute inset-0" aria-hidden="true" />
-                          {match.tournament}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                          {match.team} vs {match.opponent}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {new Date(match.date).toLocaleString('fr-FR', {
-                            dateStyle: 'long',
-                            timeStyle: 'short',
-                          })}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                {upcomingMatches.length === 0 ? (
+                  <p className="text-gray-500">Vous n'avez pas de matchs à venir.</p>
+                ) : (
+                  <ul role="list" className="-my-5 divide-y divide-gray-200">
+                    {upcomingMatches.map((match) => (
+                      <li key={match.id} className="py-5">
+                        <div className="relative focus-within:ring-2 focus-within:ring-blue-500">
+                          <h3 className="text-sm font-semibold text-gray-800">
+                            <span className="absolute inset-0" aria-hidden="true" />
+                            {match.tournamentName}
+                          </h3>
+                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                            {match.team1Name} vs {match.team2Name}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">
+                            {new Date(match.date).toLocaleString('fr-FR', {
+                              dateStyle: 'long',
+                              timeStyle: 'short',
+                            })}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
@@ -121,7 +205,7 @@ function Profile() {
                           Victoires
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          15
+                          {stats.victories}
                         </dd>
                       </dl>
                     </div>
@@ -143,7 +227,7 @@ function Profile() {
                           Matchs joués
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          25
+                          {stats.matchesPlayed}
                         </dd>
                       </dl>
                     </div>
@@ -165,7 +249,7 @@ function Profile() {
                           Points marqués
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          45
+                          {stats.pointsScored}
                         </dd>
                       </dl>
                     </div>

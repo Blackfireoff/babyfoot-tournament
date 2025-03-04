@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { tournamentService } from '../services/api';
 import TournamentBracket from '../components/TournamentBracket';
 import '../components/TournamentBracket.css';
 
@@ -8,185 +10,25 @@ function TournamentDetails() {
   const [tournament, setTournament] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Dans un environnement réel, vous feriez un appel API ici
-    // Simulation de données pour l'exemple
-    const fetchTournament = () => {
-      setLoading(true);
-      try {
-        // Simuler un délai de chargement
-        setTimeout(() => {
-          // Données de démonstration
-          const mockTournament = {
-            id: parseInt(id),
-            name: 'Tournoi de Babyfoot 2024',
-            status: 'in_progress',
-            startDate: '2024-03-01',
-            endDate: '2024-03-15',
-            teams: [
-              { id: 1, name: 'G2 Stride', logo: 'https://via.placeholder.com/24' },
-              { id: 2, name: 'Team BDS', logo: 'https://via.placeholder.com/24' },
-              { id: 3, name: 'Team Falcons', logo: 'https://via.placeholder.com/24' },
-              { id: 4, name: 'Karmine Corp', logo: 'https://via.placeholder.com/24' },
-              { id: 5, name: 'FURIA', logo: 'https://via.placeholder.com/24' },
-              { id: 6, name: 'Spacestation', logo: 'https://via.placeholder.com/24' },
-              { id: 7, name: 'Gentle Mates Alpine', logo: 'https://via.placeholder.com/24' },
-              { id: 8, name: 'Oxygen Esports', logo: 'https://via.placeholder.com/24' }
-            ],
-            maxTeams: 8,
-            // Exemple de bracket avec des résultats déjà remplis
-            bracket: [
-              // Premier tour (quarts de finale)
-              [
-                {
-                  id: 'round1-match1',
-                  team1: 'G2 Stride',
-                  team1Id: 1,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 3,
-                  team2: 'Team BDS',
-                  team2Id: 2,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 4,
-                  round: 1,
-                  matchNumber: 1
-                },
-                {
-                  id: 'round1-match2',
-                  team1: 'Team Falcons',
-                  team1Id: 3,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 1,
-                  team2: 'Karmine Corp',
-                  team2Id: 4,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 4,
-                  round: 1,
-                  matchNumber: 2
-                },
-                {
-                  id: 'round1-match3',
-                  team1: 'FURIA',
-                  team1Id: 5,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 4,
-                  team2: 'Spacestation',
-                  team2Id: 6,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 3,
-                  round: 1,
-                  matchNumber: 3
-                },
-                {
-                  id: 'round1-match4',
-                  team1: 'Gentle Mates Alpine',
-                  team1Id: 7,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 2,
-                  team2: 'Oxygen Esports',
-                  team2Id: 8,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 4,
-                  round: 1,
-                  matchNumber: 4
-                }
-              ],
-              // Demi-finales
-              [
-                {
-                  id: 'round2-match1',
-                  team1: 'Team BDS',
-                  team1Id: 2,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 4,
-                  team2: 'Karmine Corp',
-                  team2Id: 4,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 3,
-                  round: 2,
-                  matchNumber: 1
-                },
-                {
-                  id: 'round2-match2',
-                  team1: 'FURIA',
-                  team1Id: 5,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 2,
-                  team2: 'Oxygen Esports',
-                  team2Id: 8,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 4,
-                  round: 2,
-                  matchNumber: 2
-                }
-              ],
-              // Finale
-              [
-                {
-                  id: 'round3-match1',
-                  team1: 'Team BDS',
-                  team1Id: 2,
-                  team1Logo: 'https://via.placeholder.com/24',
-                  team1Score: 4,
-                  team2: 'Oxygen Esports',
-                  team2Id: 8,
-                  team2Logo: 'https://via.placeholder.com/24',
-                  team2Score: 2,
-                  round: 3,
-                  matchNumber: 1
-                }
-              ]
-            ]
-          };
-          
-          // Exemple de tournoi avec un nombre impair d'équipes (7)
-          if (id === '2') {
-            mockTournament.name = 'Tournoi de Babyfoot - Édition Spéciale';
-            mockTournament.teams = mockTournament.teams.slice(0, 7); // Prendre seulement 7 équipes
-            mockTournament.maxTeams = 8;
-            delete mockTournament.bracket; // Supprimer le bracket prédéfini pour qu'il soit généré automatiquement
-          }
-          
-          // Exemple de tournoi avec seulement 4 équipes
-          if (id === '1') {
-            mockTournament.name = 'Tournoi du Printemps';
-            mockTournament.teams = mockTournament.teams.slice(0, 4); // Prendre seulement 4 équipes
-            mockTournament.maxTeams = 8;
-            delete mockTournament.bracket; // Supprimer le bracket prédéfini pour qu'il soit généré automatiquement
-          }
-          
-          // Exemple de tournoi avec 16 équipes possibles mais seulement 5 inscrites
-          if (id === '4') {
-            mockTournament.name = 'Grand Tournoi de Babyfoot - 16 équipes';
-            mockTournament.maxTeams = 16;
-            mockTournament.status = 'open';
-            mockTournament.startDate = '2024-05-15';
-            mockTournament.endDate = '2024-05-30';
-            
-            // Seulement 5 équipes ont rejoint
-            mockTournament.teams = [
-              { id: 1, name: 'Les Invincibles', logo: 'https://via.placeholder.com/24' },
-              { id: 2, name: 'Foot Masters', logo: 'https://via.placeholder.com/24' },
-              { id: 3, name: 'Table Titans', logo: 'https://via.placeholder.com/24' },
-              { id: 4, name: 'Goal Getters', logo: 'https://via.placeholder.com/24' },
-              { id: 5, name: 'Spin Doctors', logo: 'https://via.placeholder.com/24' }
-            ];
-            
-            delete mockTournament.bracket; // Supprimer le bracket prédéfini pour qu'il soit généré automatiquement
-          }
-          
-          setTournament(mockTournament);
-          setLoading(false);
-        }, 800);
-      } catch (err) {
-        setError('Erreur lors du chargement des données du tournoi');
-        setLoading(false);
-      }
-    };
-
     fetchTournament();
   }, [id]);
+
+  const fetchTournament = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await tournamentService.getTournamentById(parseInt(id));
+      setTournament(data);
+    } catch (err) {
+      console.error('Error fetching tournament:', err);
+      setError('Erreur lors du chargement des données du tournoi');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -244,6 +86,33 @@ function TournamentDetails() {
     }
   };
 
+  const handleStartTournament = async () => {
+    if (!confirm("Êtes-vous sûr de vouloir démarrer le tournoi ? Cette action ne peut pas être annulée.")) {
+      return;
+    }
+    
+    try {
+      await tournamentService.startTournament(tournament.id);
+      fetchTournament(); // Recharger les données du tournoi
+    } catch (err) {
+      console.error('Error starting tournament:', err);
+      alert('Impossible de démarrer le tournoi. Veuillez réessayer plus tard.');
+    }
+  };
+
+  const handleUpdateScore = async (matchId, team1Score, team2Score) => {
+    try {
+      await tournamentService.updateMatchScore(matchId, {
+        team1Score: parseInt(team1Score),
+        team2Score: parseInt(team2Score)
+      });
+      fetchTournament(); // Recharger les données du tournoi
+    } catch (err) {
+      console.error('Error updating match score:', err);
+      alert('Impossible de mettre à jour le score. Veuillez réessayer plus tard.');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
@@ -254,10 +123,22 @@ function TournamentDetails() {
       
       <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
         <div className="px-4 py-5 sm:px-6">
-          <h1 className="text-2xl font-bold text-gray-900">{tournament.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            {new Date(tournament.startDate).toLocaleDateString('fr-FR')} - {new Date(tournament.endDate).toLocaleDateString('fr-FR')}
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{tournament.name}</h1>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                {new Date(tournament.startDate).toLocaleDateString('fr-FR')} - {tournament.endDate && new Date(tournament.endDate).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+            {user && tournament.ownerId === user.id && tournament.status === 'open' && tournament.teams.length >= 2 && (
+              <button
+                onClick={handleStartTournament}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Démarrer le tournoi
+              </button>
+            )}
+          </div>
         </div>
         <div className="border-t border-gray-200">
           <dl>
@@ -275,23 +156,60 @@ function TournamentDetails() {
                 {tournament.teams.length} / {tournament.maxTeams}
               </dd>
             </div>
+            {tournament.ownerId && (
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Organisateur</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {tournament.ownerName || `Utilisateur #${tournament.ownerId}`}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Bracket du tournoi</h2>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Visualisation de l'avancement des matchs
-          </p>
-        </div>
-        <div className="px-4 py-6 overflow-x-auto">
-          <div className="mx-auto" style={{ width: '100%', minHeight: '800px' }}>
-            <TournamentBracket tournament={tournament} />
+      {tournament.status !== 'open' && tournament.bracket && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Bracket du tournoi</h2>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Visualisation de l'avancement des matchs
+            </p>
+          </div>
+          <div className="px-4 py-6 overflow-x-auto">
+            <div className="mx-auto" style={{ width: '100%', minHeight: '800px' }}>
+              <TournamentBracket 
+                tournament={tournament} 
+                onUpdateScore={user && (tournament.ownerId === user.id || user.isAdmin) ? handleUpdateScore : null}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {tournament.status === 'open' && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Équipes inscrites</h2>
+          </div>
+          <div className="px-4 py-6">
+            {tournament.teams.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Aucune équipe inscrite pour le moment.</p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {tournament.teams.map(team => (
+                  <li key={team.id} className="bg-gray-50 rounded-lg p-4 flex items-center">
+                    {team.logo && (
+                      <img src={team.logo} alt={team.name} className="w-8 h-8 mr-3" />
+                    )}
+                    <span className="font-medium">{team.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

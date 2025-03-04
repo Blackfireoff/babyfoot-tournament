@@ -1,14 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SingleEliminationBracket, SVGViewer } from 'react-tournament-brackets';
 
 // Composant personnalisé pour afficher un match avec logos
-const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style, ...props }) => {
+const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style, onUpdateScore, ...props }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [team1Score, setTeam1Score] = useState(match.participants[0].resultText || '');
+  const [team2Score, setTeam2Score] = useState(match.participants[1].resultText || '');
+
   const getTeamLogo = (teamName) => {
     if (!teamName || teamName === 'À déterminer') return null;
     
     // Rechercher l'équipe dans les données du tournoi
     const team = match.participants.find(p => p.name === teamName);
     return team && team.logo ? team.logo : 'https://via.placeholder.com/24';
+  };
+
+  const handleSaveScore = () => {
+    if (onUpdateScore) {
+      onUpdateScore(match.id, team1Score, team2Score);
+    }
+    setIsEditing(false);
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = (e) => {
+    e.stopPropagation();
+    setTeam1Score(match.participants[0].resultText || '');
+    setTeam2Score(match.participants[1].resultText || '');
+    setIsEditing(false);
   };
 
   return (
@@ -18,14 +41,14 @@ const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style,
         flexDirection: 'column',
         justifyContent: 'center',
         width: '200px',
-        height: '100px',
+        height: isEditing ? '140px' : '100px',
         backgroundColor: 'white',
         border: '1px solid #ccc',
         borderRadius: '4px',
         boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
         ...style
       }}
-      onClick={() => onMatchClick(match.id)}
+      onClick={() => !isEditing && onMatchClick(match.id)}
     >
       {match.participants.map((participant, index) => (
         <div
@@ -38,8 +61,10 @@ const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style,
             borderBottom: index === 0 ? '1px solid #eee' : 'none'
           }}
           onClick={(e) => {
-            e.stopPropagation();
-            onPartyClick(participant, match);
+            if (!isEditing) {
+              e.stopPropagation();
+              onPartyClick(participant, match);
+            }
           }}
         >
           <div style={{ marginRight: '8px', width: '24px', height: '24px' }}>
@@ -52,14 +77,74 @@ const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style,
             )}
           </div>
           <div style={{ flex: 1 }}>{participant.name}</div>
-          <div style={{ fontWeight: 'bold' }}>{participant.resultText || '-'}</div>
+          {isEditing ? (
+            <input
+              type="number"
+              min="0"
+              value={index === 0 ? team1Score : team2Score}
+              onChange={(e) => index === 0 ? setTeam1Score(e.target.value) : setTeam2Score(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: '40px', textAlign: 'center' }}
+            />
+          ) : (
+            <div style={{ fontWeight: 'bold' }}>{participant.resultText || '-'}</div>
+          )}
         </div>
       ))}
+      
+      {onUpdateScore && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px' }}>
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSaveScore}
+                style={{
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  marginRight: '4px',
+                  fontSize: '12px'
+                }}
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                style={{
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '12px'
+                }}
+              >
+                Annuler
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleEditClick}
+              style={{
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                fontSize: '12px'
+              }}
+            >
+              Modifier le score
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-const TournamentBracket = ({ tournament }) => {
+const TournamentBracket = ({ tournament, onUpdateScore }) => {
   // Fonction pour convertir les données du tournoi au format attendu par la bibliothèque
   const convertToLibraryFormat = (tournamentData) => {
     if (!tournamentData || !tournamentData.teams || tournamentData.teams.length === 0) {
@@ -209,6 +294,7 @@ const TournamentBracket = ({ tournament }) => {
               match={match} 
               onMatchClick={handleMatchClick}
               onPartyClick={handlePartyClick}
+              onUpdateScore={onUpdateScore}
               {...props} 
             />
           )}
