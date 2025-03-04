@@ -1,0 +1,65 @@
+/* Styles pour améliorer l'accessibilité des champs d'édition de score */
+
+/* Assurer que les champs de saisie et boutons sont toujours au-dessus */
+.tournament-bracket input,
+.tournament-bracket button {
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+/* Désactiver les événements de pointeur sur les lignes de connexion */
+.tournament-bracket .match-wrapper::after,
+.tournament-bracket .match-wrapper::before {
+  pointer-events: none !important;
+}
+
+/* Styles pour les champs de saisie */
+.tournament-bracket input[type="number"] {
+  width: 50px !important;
+  text-align: center !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 4px !important;
+  padding: 4px !important;
+  background-color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-weight: bold !important;
+}
+
+/* Styles pour les boutons */
+.tournament-bracket button {
+  border-radius: 4px !important;
+  padding: 6px 10px !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  cursor: pointer !important;
+}
+
+/* Bouton Modifier */
+.tournament-bracket button.edit-button {
+  background-color: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+}
+
+/* Bouton Enregistrer */
+.tournament-bracket button.save-button {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border: none !important;
+  margin-right: 6px !important;
+}
+
+/* Bouton Annuler */
+.tournament-bracket button.cancel-button {
+  background-color: #ef4444 !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Style pour le match en cours d'édition */
+.tournament-bracket .match-editing {
+  background-color: #f8fafc !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important;
+  z-index: 1000 !important;
+} 

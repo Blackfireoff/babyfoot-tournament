@@ -4,231 +4,69 @@
   padding: 20px 0;
 }
 
-/* Styles pour personnaliser l'apparence des matchs de la bibliothèque */
-.tournament-bracket svg {
-  font-family: 'Inter', sans-serif;
-}
-
-/* Assurer que le conteneur est suffisamment grand pour afficher tout le bracket */
-.tournament-bracket > div {
-  min-width: 100%;
-  min-height: 600px;
-}
-
+/* Structure principale du bracket */
 .bracket-container {
   display: flex;
-  justify-content: space-between;
-  min-width: 1200px;
-  position: relative;
-  padding: 20px 40px;
-  margin: 0 auto;
+  padding: 20px 0;
+  min-width: 1000px;
+  justify-content: center;
 }
 
+/* Styles pour les rounds */
 .round {
   display: flex;
   flex-direction: column;
-  flex: 1;
   margin: 0 60px;
+  flex: 1;
   position: relative;
   max-width: 280px;
 }
 
-.round:first-child {
-  margin-left: 0;
-}
-
-.round:last-child {
-  margin-right: 0;
-}
-
-.round-title {
+.round-header {
   text-align: center;
-  margin-bottom: 40px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: bold;
+  margin-bottom: 30px;
+  color: #4a5568;
   font-size: 1.1rem;
 }
 
 .matches {
   display: flex;
   flex-direction: column;
+  position: relative;
   height: 100%;
-  position: relative;
 }
 
+/* Styles pour les matchs */
 .match-wrapper {
   position: relative;
-  margin: 15px 0;
+  margin: 20px 0;
 }
 
-/* Lignes de connexion */
-.match-wrapper {
-  position: relative;
-}
-
-/* Ligne horizontale à droite du match */
-.match-wrapper::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -60px;
-  width: 60px;
-  height: 2px;
-  background-color: #000;
-  z-index: 1;
-}
-
-/* Lignes verticales pour connecter les matchs */
-.round:not(:last-child) .matches::before {
-  display: none; /* On n'utilise pas cette méthode */
-}
-
-/* Lignes verticales pour les paires de matchs */
-.round-1 .match-wrapper:nth-child(1)::before,
-.round-1 .match-wrapper:nth-child(3)::before,
-.round-1 .match-wrapper:nth-child(5)::before,
-.round-1 .match-wrapper:nth-child(7)::before,
-.round-1 .match-wrapper:nth-child(9)::before,
-.round-1 .match-wrapper:nth-child(11)::before,
-.round-1 .match-wrapper:nth-child(13)::before,
-.round-1 .match-wrapper:nth-child(15)::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -60px;
-  width: 2px;
-  height: 143%;
-  background-color: #000;
-  z-index: 1;
-}
-
-.round-2 .match-wrapper:nth-child(1)::before,
-.round-2 .match-wrapper:nth-child(3)::before,
-.round-2 .match-wrapper:nth-child(5)::before,
-.round-2 .match-wrapper:nth-child(7)::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -60px;
-  width: 2px;
-  height: 200%;
-  background-color: #000;
-  z-index: 1;
-}
-
-.round-3 .match-wrapper:nth-child(1)::before,
-.round-3 .match-wrapper:nth-child(3)::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -60px;
-  width: 2px;
-  height: 400%;
-  background-color: #000;
-  z-index: 1;
-}
-
-/* Masquer les lignes pour le dernier tour */
-.round:last-child .match-wrapper::after,
-.round:last-child .match-wrapper::before {
-  display: none;
-}
-
-/* Ajustement pour les lignes des matchs pairs/impairs */
-.match-wrapper:nth-child(even)::after {
-  top: 50%;
-}
-
-.match-wrapper:nth-child(odd)::after {
-  top: 50%;
-}
-
-/* Positionnement spécifique pour les matchs */
-.round-1 .match-wrapper {
-  margin: 10px 0;
-}
-
-.round-2 .match-wrapper {
-  margin: 40px 0;
-}
-
-.round-3 .match-wrapper {
-  margin: 100px 0;
-}
-
-.round-4 .match-wrapper {
-  margin: 220px 0;
-}
-
-/* Ajustement pour les matchs spécifiques */
-.round-1 .match-wrapper:nth-child(2) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(4) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(6) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(8) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(10) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(12) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(14) {
-  margin-top: 30px;
-}
-
-.round-1 .match-wrapper:nth-child(16) {
-  margin-top: 30px;
-}
-
+/* Styles pour le match */
 .match {
-  border: 1px solid #000;
-  border-radius: 0;
-  overflow: hidden;
-  box-shadow: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 250px;
+  transition: all 0.2s ease;
+  overflow: hidden;
   position: relative;
   z-index: 2;
-  width: 100%;
 }
 
-.match-empty {
-  opacity: 0.8;
-  border: 1px solid #000;
-  box-shadow: none;
+.match:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
-.match-empty .team {
-  background-color: #fff;
-  color: #666;
-}
-
-.match-bye .team:first-child {
-  border-bottom: none;
-}
-
+/* Styles pour les équipes */
 .team {
   display: flex;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #000;
-  background-color: #fff;
-}
-
-.team.winner {
-  background-color: rgba(16, 185, 129, 0.1);
+  padding: 10px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .team:last-child {
@@ -242,54 +80,138 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
-  border-radius: 50%;
-  overflow: hidden;
 }
 
 .team-logo img {
   max-width: 100%;
   max-height: 100%;
+  object-fit: contain;
 }
 
 .team-name {
   flex: 1;
-  font-size: 14px;
   font-weight: 500;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 .team-score {
   font-weight: bold;
-  min-width: 24px;
+  color: #1a202c;
+  min-width: 30px;
   text-align: center;
-  font-size: 16px;
-  color: #111827;
+  margin-left: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.winner {
-  background-color: rgba(16, 185, 129, 0.1);
+/* Style pour les équipes gagnantes */
+.team.winner {
+  background-color: #ebf8ff;
 }
 
-.loser {
-  opacity: 0.8;
+.team.winner .team-score {
+  background-color: #bee3f8;
+  color: #2b6cb0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .bracket-container {
-    flex-direction: column;
-    min-width: auto;
-    padding: 20px;
+/* Lignes de connexion horizontales */
+.match-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -60px;
+  width: 60px;
+  height: 2px;
+  background-color: #cbd5e0;
+  z-index: 1;
+}
+
+/* Lignes de connexion verticales pour les matchs impairs */
+.round:not(:last-child) .match-wrapper:nth-child(odd)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -60px;
+  width: 2px;
+  height: 100px;
+  background-color: #cbd5e0;
+  z-index: 1;
+}
+
+/* Lignes de connexion verticales pour les matchs pairs */
+.round:not(:last-child) .match-wrapper:nth-child(even)::before {
+  content: '';
+  position: absolute;
+  bottom: 50%;
+  right: -60px;
+  width: 2px;
+  height: 100px;
+  background-color: #cbd5e0;
+  z-index: 1;
+}
+
+/* Masquer les lignes pour le dernier round */
+.round:last-child .match-wrapper::after,
+.round:last-child .match-wrapper::before {
+  display: none;
+}
+
+/* Positionnement spécifique pour les matchs selon les rounds */
+.round-1 .match-wrapper:nth-child(1) {
+  margin-top: 50px;
+}
+
+.round-1 .match-wrapper:nth-child(2) {
+  margin-top: 150px;
+}
+
+.round-2 .match-wrapper {
+  margin-top: 125px;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .match {
+    width: 220px;
   }
   
   .round {
-    margin: 30px 0;
-    max-width: 100%;
+    margin: 0 40px;
   }
   
-  /* Ajuster les lignes pour l'affichage mobile */
-  .match-wrapper::after,
-  .match-wrapper::before {
-    display: none;
+  .match-wrapper::after {
+    right: -40px;
+    width: 40px;
+  }
+  
+  .round:not(:last-child) .match-wrapper::before {
+    right: -40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .match {
+    width: 180px;
+  }
+  
+  .team-name {
+    max-width: 100px;
+  }
+  
+  .round {
+    margin: 0 30px;
+  }
+  
+  .match-wrapper::after {
+    right: -30px;
+    width: 30px;
+  }
+  
+  .round:not(:last-child) .match-wrapper::before {
+    right: -30px;
   }
 } 

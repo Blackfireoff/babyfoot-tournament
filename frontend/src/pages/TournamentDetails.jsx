@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { tournamentService } from '../services/api';
 import TournamentBracket from '../components/TournamentBracket';
+import SimpleTournamentBracket from '../components/SimpleTournamentBracket';
+import MatchScoreRow from '../components/MatchScoreRow';
 import '../components/TournamentBracket.css';
+import '../components/TournamentBracketEdit.css';
 
 function TournamentDetails() {
   const { id } = useParams();
   const [tournament, setTournament] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
 
@@ -17,17 +21,41 @@ function TournamentDetails() {
   }, [id]);
 
   const fetchTournament = async () => {
-    setLoading(true);
+    if (!refreshing) setLoading(true);
+    else setRefreshing(true);
+    
     setError(null);
     try {
-      const data = await tournamentService.getTournament(parseInt(id));
-      setTournament(data);
+      const tournamentData = await tournamentService.getTournament(parseInt(id));
+      
+      // Si le tournoi est en cours, récupérer également les matchs
+      if (tournamentData.status === 'in_progress' || tournamentData.status === 'closed') {
+        try {
+          const matches = await tournamentService.getTournamentMatches(tournamentData.id);
+          tournamentData.matches = matches;
+        } catch (matchErr) {
+          console.error('Error fetching tournament matches:', matchErr);
+          // Ne pas bloquer l'affichage du tournoi si les matchs ne peuvent pas être récupérés
+          tournamentData.matches = [];
+        }
+      } else {
+        tournamentData.matches = [];
+      }
+      
+      setTournament(tournamentData);
     } catch (err) {
       console.error('Error fetching tournament:', err);
       setError('Erreur lors du chargement des données du tournoi');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  // Fonction pour rafraîchir uniquement les données sans afficher le loader principal
+  const refreshTournament = () => {
+    setRefreshing(true);
+    fetchTournament();
   };
 
   if (loading) {
@@ -102,11 +130,11 @@ function TournamentDetails() {
 
   const handleUpdateScore = async (matchId, team1Score, team2Score) => {
     try {
-      await tournamentService.updateMatchScore(matchId, {
-        team1Score: parseInt(team1Score),
-        team2Score: parseInt(team2Score)
-      });
-      fetchTournament(); // Recharger les données du tournoi
+      await tournamentService.updateMatchScore(matchId, team1Score, team2Score);
+      // Recharger les données complètes du tournoi, y compris les matchs mis à jour
+      await fetchTournament();
+      // Afficher un message de succès
+      alert('Score mis à jour avec succès !');
     } catch (err) {
       console.error('Error updating match score:', err);
       alert('Impossible de mettre à jour le score. Veuillez réessayer plus tard.');
@@ -168,7 +196,7 @@ function TournamentDetails() {
         </div>
       </div>
 
-      {tournament.status !== 'open' && tournament.bracket && (
+      {tournament.status !== 'open' && (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Bracket du tournoi</h2>
@@ -176,13 +204,105 @@ function TournamentDetails() {
               Visualisation de l'avancement des matchs
             </p>
           </div>
-          <div className="px-4 py-6 overflow-x-auto">
-            <div className="mx-auto" style={{ width: '100%', minHeight: '800px' }}>
-              <TournamentBracket 
-                tournament={tournament} 
-                onUpdateScore={user && (tournament.owner_id === user.id || user.isAdmin) ? handleUpdateScore : null}
-              />
+          <div className="px-4 py-6">
+            <div className="w-full" style={{ minHeight: '800px' }}>
+              {tournament && tournament.matches && tournament.matches.length > 0 ? (
+                <TournamentBracket 
+                  tournament={tournament} 
+                />
+              ) : (
+                <div className="flex justify-center items-center h-64">
+                  <p className="text-gray-500">Aucun match disponible pour afficher le bracket.</p>
+                </div>
+              )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {tournament.status === 'in_progress' && user && (tournament.owner_id === user.id || user.isAdmin) && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-8">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Gestion des scores</h2>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Mettez à jour les scores des matchs du tournoi
+              </p>
+            </div>
+            <button 
+              onClick={refreshTournament}
+              disabled={refreshing}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400"
+            >
+              {refreshing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Chargement...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Rafraîchir
+                </>
+              )}
+            </button>
+          </div>
+          <div className="px-4 py-6">
+            {tournament.matches && tournament.matches.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tour
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Match
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Équipe 1
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Score
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Équipe 2
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Score
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {tournament.matches.map((match) => {
+                      // Trouver les équipes correspondantes
+                      const team1 = tournament.teams.find(t => t.id === match.team1_id);
+                      const team2 = tournament.teams.find(t => t.id === match.team2_id);
+                      
+                      return (
+                        <MatchScoreRow 
+                          key={match.id} 
+                          match={match} 
+                          team1={team1} 
+                          team2={team2} 
+                          onUpdateScore={handleUpdateScore} 
+                        />
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-4">Aucun match disponible pour le moment. {tournament.status === 'in_progress' ? "Veuillez rafraîchir la page si le tournoi vient d'être démarré." : ""}</p>
+            )}
           </div>
         </div>
       )}

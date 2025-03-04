@@ -1,37 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { SingleEliminationBracket, SVGViewer } from 'react-tournament-brackets';
+import './TournamentBracketEdit.css';
+
+// Composant ErrorBoundary pour capturer les erreurs
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Erreur dans le composant TournamentBracket:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="tournament-bracket w-full flex justify-center items-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <p className="text-red-500 font-semibold">Une erreur s'est produite lors de l'affichage du bracket.</p>
+            <p className="text-gray-500 mt-2">Veuillez réessayer plus tard ou contacter l'administrateur.</p>
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-blue-500">Détails techniques</summary>
+              <pre className="mt-2 p-4 bg-gray-100 rounded text-xs overflow-auto">
+                {this.state.error && this.state.error.toString()}
+              </pre>
+            </details>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Composant personnalisé pour afficher un match avec logos
-const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style, onUpdateScore, ...props }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [team1Score, setTeam1Score] = useState(match.participants[0].resultText || '');
-  const [team2Score, setTeam2Score] = useState(match.participants[1].resultText || '');
-
+const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style, ...props }) => {
   const getTeamLogo = (teamName) => {
     if (!teamName || teamName === 'À déterminer') return null;
     
     // Rechercher l'équipe dans les données du tournoi
     const team = match.participants.find(p => p.name === teamName);
-    return team && team.logo ? team.logo : 'https://via.placeholder.com/24';
-  };
-
-  const handleSaveScore = () => {
-    if (onUpdateScore) {
-      onUpdateScore(match.id, team1Score, team2Score);
-    }
-    setIsEditing(false);
-  };
-
-  const handleEditClick = (e) => {
-    e.stopPropagation();
-    setIsEditing(true);
-  };
-
-  const handleCancelEdit = (e) => {
-    e.stopPropagation();
-    setTeam1Score(match.participants[0].resultText || '');
-    setTeam2Score(match.participants[1].resultText || '');
-    setIsEditing(false);
+    return team && team.logo ? team.logo : null;
   };
 
   return (
@@ -40,291 +55,331 @@ const CustomMatch = ({ match, onMatchClick, onPartyClick, currentMatchId, style,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        width: '200px',
-        height: isEditing ? '140px' : '100px',
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
-        ...style
+        width: '100%',
+        height: '100%',
+        ...style,
       }}
-      onClick={() => !isEditing && onMatchClick(match.id)}
+      onClick={() => onMatchClick(match.id)}
     >
+      <div style={{ textAlign: 'center', padding: '0 0 5px' }}>
+        {match.name}
+      </div>
       {match.participants.map((participant, index) => (
         <div
-          key={index}
+          key={participant.id}
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '8px',
-            backgroundColor: participant.isWinner ? '#f0f9ff' : 'transparent',
-            borderBottom: index === 0 ? '1px solid #eee' : 'none'
+            padding: '5px 10px',
+            backgroundColor: participant.isWinner ? 'rgba(16, 185, 129, 0.1)' : 'white',
+            border: '1px solid #000',
+            borderTop: index === 0 ? '1px solid #000' : 'none',
           }}
           onClick={(e) => {
-            if (!isEditing) {
-              e.stopPropagation();
-              onPartyClick(participant, match);
-            }
+            e.stopPropagation();
+            onPartyClick(participant, match);
           }}
         >
-          <div style={{ marginRight: '8px', width: '24px', height: '24px' }}>
-            {getTeamLogo(participant.name) && (
+          {getTeamLogo(participant.name) && (
+            <div style={{ 
+              width: '24px', 
+              height: '24px', 
+              marginRight: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#fff',
+              borderRadius: '50%',
+              overflow: 'hidden'
+            }}>
               <img 
                 src={getTeamLogo(participant.name)} 
                 alt={participant.name} 
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                style={{ maxWidth: '100%', maxHeight: '100%' }} 
               />
-            )}
-          </div>
-          <div style={{ flex: 1 }}>{participant.name}</div>
-          {isEditing ? (
-            <input
-              type="number"
-              min="0"
-              value={index === 0 ? team1Score : team2Score}
-              onChange={(e) => index === 0 ? setTeam1Score(e.target.value) : setTeam2Score(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              style={{ width: '40px', textAlign: 'center' }}
-            />
-          ) : (
-            <div style={{ fontWeight: 'bold' }}>{participant.resultText || '-'}</div>
+            </div>
           )}
+          <div style={{ flex: 1 }}>{participant.name}</div>
+          <div style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+            {participant.resultText}
+          </div>
         </div>
       ))}
-      
-      {onUpdateScore && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px' }}>
-          {isEditing ? (
-            <>
-              <button
-                onClick={handleSaveScore}
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  marginRight: '4px',
-                  fontSize: '12px'
-                }}
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                style={{
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  fontSize: '12px'
-                }}
-              >
-                Annuler
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={handleEditClick}
-              style={{
-                backgroundColor: '#f3f4f6',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                padding: '4px 8px',
-                fontSize: '12px'
-              }}
-            >
-              Modifier le score
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 };
 
-const TournamentBracket = ({ tournament, onUpdateScore }) => {
+const TournamentBracket = ({ tournament }) => {
+  // Fonction pour normaliser l'ID d'un match
+  const normalizeMatchId = (originalId, round, matchNumber) => {
+    // Vérifier si l'ID est déjà au format attendu (round{X}-match{Y})
+    if (/^round\d+-match\d+$/.test(originalId)) {
+      return originalId;
+    }
+    
+    // Sinon, créer un nouvel ID au format attendu
+    return `round${round}-match${matchNumber}`;
+  };
+
   // Fonction pour convertir les données du tournoi au format attendu par la bibliothèque
   const convertToLibraryFormat = (tournamentData) => {
     if (!tournamentData || !tournamentData.teams || tournamentData.teams.length === 0) {
       return [];
     }
 
-    const maxTeams = tournamentData.maxTeams || tournamentData.teams.length;
+    // Vérifier si le tournoi a des matchs
+    const hasMatches = tournamentData.matches && tournamentData.matches.length > 0;
+    
+    const maxTeams = tournamentData.max_teams || tournamentData.teams.length;
     const rounds = Math.ceil(Math.log2(maxTeams));
     
-    // Créer les matchs du premier tour
-    const firstRoundMatches = [];
+    // Calculer le nombre total de matchs pour le premier tour
     const totalMatches = Math.floor(maxTeams / 2);
     
-    for (let i = 0; i < totalMatches; i++) {
-      const team1Index = i * 2;
-      const team2Index = i * 2 + 1;
+    // Initialiser allMatches en dehors du bloc if
+    const allMatches = [];
+    
+    // Si le tournoi a des matchs, utiliser ces données
+    if (hasMatches) {
+      console.log("Utilisation des matchs existants:", tournamentData.matches);
       
-      const team1 = team1Index < tournamentData.teams.length ? tournamentData.teams[team1Index] : null;
-      const team2 = team2Index < tournamentData.teams.length ? tournamentData.teams[team2Index] : null;
-      
-      firstRoundMatches.push({
-        id: `round1-match${i+1}`,
-        name: `Match ${i+1}`,
-        nextMatchId: i % 2 === 0 ? `round2-match${Math.floor(i/2) + 1}` : `round2-match${Math.floor(i/2) + 1}`,
-        tournamentRoundText: '1',
-        startTime: '',
-        state: 'SCHEDULED',
-        participants: [
-          {
-            id: team1 ? team1.id : `empty-${i*2}`,
-            name: team1 ? team1.name : 'À déterminer',
-            isWinner: false,
-            status: team1 ? null : 'NO_SHOW',
-            resultText: null,
-            logo: team1 ? team1.logo : null
-          },
-          {
-            id: team2 ? team2.id : `empty-${i*2+1}`,
-            name: team2 ? team2.name : 'À déterminer',
-            isWinner: false,
-            status: team2 ? null : 'NO_SHOW',
-            resultText: null,
-            logo: team2 ? team2.logo : null
-          }
-        ]
+      // Organiser les matchs par tour
+      const matchesByRound = {};
+      tournamentData.matches.forEach(match => {
+        if (!matchesByRound[match.round]) {
+          matchesByRound[match.round] = [];
+        }
+        matchesByRound[match.round].push(match);
       });
-    }
-    
-    // Créer les matchs des tours suivants
-    const allMatches = [...firstRoundMatches];
-    
-    for (let round = 2; round <= rounds; round++) {
-      const matchesInRound = Math.pow(2, rounds - round);
       
-      for (let match = 1; match <= matchesInRound; match++) {
-        const nextMatchId = round < rounds ? `round${round+1}-match${Math.ceil(match/2)}` : null;
+      // Vérifier si tous les matchs du premier tour sont terminés
+      const round1Matches = matchesByRound[1] || [];
+      const allRound1MatchesCompleted = round1Matches.length > 0 && 
+        round1Matches.every(match => match.team1_score !== null && match.team2_score !== null);
+      
+      // Générer le match final s'il n'existe pas encore mais que les matchs du premier tour sont terminés
+      if (allRound1MatchesCompleted && (!matchesByRound[2] || matchesByRound[2].length === 0)) {
+        // Trouver les gagnants des matchs du premier tour
+        const winners = round1Matches.map(match => {
+          if (match.team1_score > match.team2_score) {
+            return match.team1_id;
+          } else if (match.team2_score > match.team1_score) {
+            return match.team2_id;
+          }
+          return null; // En cas de match nul
+        }).filter(Boolean);
         
-        allMatches.push({
-          id: `round${round}-match${match}`,
-          name: `Match ${match}`,
-          nextMatchId: nextMatchId,
-          tournamentRoundText: round.toString(),
-          startTime: '',
-          state: 'SCHEDULED',
-          participants: [
-            {
-              id: `tbd-${round}-${match}-1`,
-              name: 'À déterminer',
-              isWinner: false,
-              status: 'NO_SHOW',
-              resultText: null,
-              logo: null
-            },
-            {
-              id: `tbd-${round}-${match}-2`,
-              name: 'À déterminer',
-              isWinner: false,
-              status: 'NO_SHOW',
-              resultText: null,
-              logo: null
-            }
-          ]
+        // S'il y a au moins deux gagnants, créer un match final
+        if (winners.length >= 2) {
+          const finalMatch = {
+            id: "round2-match1",
+            tournament_id: tournamentData.id,
+            team1_id: winners[0],
+            team2_id: winners[1],
+            round: 2,
+            match_number: 1,
+            team1_score: null,
+            team2_score: null
+          };
+          
+          // Ajouter le match final au deuxième tour
+          matchesByRound[2] = [finalMatch];
+        }
+      }
+      
+      // Traiter chaque tour
+      for (let round = 1; round <= rounds; round++) {
+        const roundMatches = matchesByRound[round] || [];
+        // Calculer le nombre de matchs attendus pour ce tour
+        const expectedMatchesInRound = round === 1 ? totalMatches : Math.pow(2, rounds - round);
+        const matchesInRound = roundMatches.length > 0 ? roundMatches : 
+                              Array(expectedMatchesInRound).fill(null);
+        
+        console.log(`Tour ${round}: ${matchesInRound.length} matchs (attendus: ${expectedMatchesInRound})`);
+        
+        matchesInRound.forEach((match, index) => {
+          if (match) {
+            // Utiliser les données du match existant
+            const team1 = tournamentData.teams.find(t => t.id === match.team1_id);
+            const team2 = tournamentData.teams.find(t => t.id === match.team2_id);
+            
+            const nextRound = round + 1;
+            const nextMatchIndex = Math.floor(index / 2);
+            const nextMatchId = round < rounds ? `round${nextRound}-match${nextMatchIndex + 1}` : null;
+            
+            // Normaliser l'ID du match pour s'assurer qu'il est compatible avec la bibliothèque
+            const normalizedMatchId = normalizeMatchId(match.id, round, match.match_number);
+            
+            allMatches.push({
+              id: normalizedMatchId,
+              originalId: match.id, // Conserver l'ID original pour les références
+              name: `Match ${match.match_number}`,
+              nextMatchId: nextMatchId,
+              tournamentRoundText: `${round}`,
+              startTime: '',
+              state: match.team1_score !== null ? 'DONE' : 'SCHEDULED',
+              participants: [
+                {
+                  id: team1 ? team1.id : `empty-${index*2}`,
+                  name: team1 ? team1.name : 'À déterminer',
+                  isWinner: match.team1_score !== null && match.team2_score !== null && match.team1_score > match.team2_score,
+                  status: team1 ? null : 'NO_SHOW',
+                  resultText: match.team1_score !== null ? `${match.team1_score}` : '',
+                  logo: team1 ? team1.logo : null,
+                },
+                {
+                  id: team2 ? team2.id : `empty-${index*2+1}`,
+                  name: team2 ? team2.name : 'À déterminer',
+                  isWinner: match.team1_score !== null && match.team2_score !== null && match.team2_score > match.team1_score,
+                  status: team2 ? null : 'NO_SHOW',
+                  resultText: match.team2_score !== null ? `${match.team2_score}` : '',
+                  logo: team2 ? team2.logo : null,
+                },
+              ],
+            });
+          } else {
+            // Ajouter un match vide si nécessaire pour compléter le bracket
+            allMatches.push({
+              id: `round${round}-match${index+1}`,
+              name: `Match ${index+1}`,
+              nextMatchId: round < rounds ? `round${round+1}-match${Math.floor(index/2) + 1}` : null,
+              tournamentRoundText: `${round}`,
+              startTime: '',
+              state: 'SCHEDULED',
+              participants: [
+                {
+                  id: `empty-${index*2}`,
+                  name: 'À déterminer',
+                  status: 'NO_SHOW',
+                  resultText: '',
+                },
+                {
+                  id: `empty-${index*2+1}`,
+                  name: 'À déterminer',
+                  status: 'NO_SHOW',
+                  resultText: '',
+                },
+              ],
+            });
+          }
         });
       }
-    }
-    
-    // Si nous avons des données de bracket existantes, mettons à jour les participants
-    if (tournamentData.bracket) {
-      // Parcourir chaque tour du bracket
-      tournamentData.bracket.forEach((round, roundIndex) => {
-        // Parcourir chaque match du tour
-        round.forEach((match, matchIndex) => {
-          const matchId = `round${roundIndex+1}-match${matchIndex+1}`;
-          const existingMatch = allMatches.find(m => m.id === matchId);
-          
-          if (existingMatch) {
-            // Mettre à jour les participants
-            if (match.team1) {
-              existingMatch.participants[0].name = match.team1;
-              existingMatch.participants[0].status = null;
-              existingMatch.participants[0].logo = match.team1Logo;
-              if (match.team1Score !== null) {
-                existingMatch.participants[0].resultText = match.team1Score.toString();
-                existingMatch.participants[0].isWinner = match.team1Score > match.team2Score;
-              }
-            }
-            
-            if (match.team2) {
-              existingMatch.participants[1].name = match.team2;
-              existingMatch.participants[1].status = null;
-              existingMatch.participants[1].logo = match.team2Logo;
-              if (match.team2Score !== null) {
-                existingMatch.participants[1].resultText = match.team2Score.toString();
-                existingMatch.participants[1].isWinner = match.team2Score > match.team1Score;
-              }
-            }
-            
-            // Mettre à jour l'état du match
-            if (match.team1Score !== null && match.team2Score !== null) {
-              existingMatch.state = 'DONE';
-            }
-          }
-        });
-      });
+    } else {
+      // Si le tournoi n'a pas de matchs, créer un bracket vide
+      console.log("Création d'un bracket vide");
+      
+      // Créer les matchs pour chaque tour
+      for (let round = 1; round <= rounds; round++) {
+        const matchesInRound = round === 1 ? totalMatches : Math.pow(2, rounds - round);
+        
+        for (let i = 0; i < matchesInRound; i++) {
+          allMatches.push({
+            id: `round${round}-match${i+1}`,
+            name: `Match ${i+1}`,
+            nextMatchId: round < rounds ? `round${round+1}-match${Math.floor(i/2) + 1}` : null,
+            tournamentRoundText: `${round}`,
+            startTime: '',
+            state: 'SCHEDULED',
+            participants: [
+              {
+                id: `empty-${i*2}`,
+                name: 'À déterminer',
+                status: 'NO_SHOW',
+                resultText: '',
+              },
+              {
+                id: `empty-${i*2+1}`,
+                name: 'À déterminer',
+                status: 'NO_SHOW',
+                resultText: '',
+              },
+            ],
+          });
+        }
+      }
     }
     
     return allMatches;
   };
 
+  // Convertir les données du tournoi au format attendu par la bibliothèque
   const matches = convertToLibraryFormat(tournament);
   
+  // Vérifier si le bracket est valide
+  const isValidBracket = matches.length > 0 && matches.every(match => 
+    match.participants && 
+    match.participants.length === 2
+  );
+
+  if (!isValidBracket) {
+    return (
+      <div className="tournament-bracket w-full flex justify-center items-center" style={{ minHeight: '400px' }}>
+        <p className="text-red-500">Format de données incorrect pour l'affichage du bracket.</p>
+      </div>
+    );
+  }
+
   const handleMatchClick = (matchId) => {
-    console.log(`Match clicked: ${matchId}`);
+    // Trouver le match correspondant pour obtenir l'ID original si disponible
+    const match = matches.find(m => m.id === matchId);
+    const originalId = match && match.originalId ? match.originalId : matchId;
+    
+    console.log(`Match clicked: ${originalId}`);
   };
   
   const handlePartyClick = (participant, match) => {
     console.log(`Participant clicked: ${participant.name} in match ${match.name}`);
   };
 
+  // Calculer la largeur et la hauteur en fonction du nombre de tours
+  const maxRound = Math.max(...matches.map(m => parseInt(m.tournamentRoundText)));
+  const width = Math.max(1000, maxRound * 300); // Au moins 1000px, ou 300px par tour
+  const height = Math.max(600, Math.pow(2, maxRound - 1) * 150); // Hauteur adaptée au nombre de matchs
+
   return (
-    <div className="tournament-bracket">
-      {matches.length > 0 && (
-        <SingleEliminationBracket
-          matches={matches}
-          matchComponent={({ match, ...props }) => (
-            <CustomMatch 
-              match={match} 
-              onMatchClick={handleMatchClick}
-              onPartyClick={handlePartyClick}
-              onUpdateScore={onUpdateScore}
-              {...props} 
+    <ErrorBoundary>
+      <div className="tournament-bracket w-full overflow-x-auto">
+        {matches.length > 0 && (
+          <div style={{ minWidth: `${width}px` }}>
+            <SingleEliminationBracket
+              matches={matches}
+              matchComponent={({ match, ...props }) => (
+                <CustomMatch 
+                  match={match} 
+                  onMatchClick={handleMatchClick}
+                  onPartyClick={handlePartyClick}
+                  {...props} 
+                />
+              )}
+              svgWrapper={({ children, ...props }) => (
+                <SVGViewer 
+                  width={width} 
+                  height={height} 
+                  background="#FFFFFF"
+                  SVGBackground="#FFFFFF"
+                  {...props}
+                >
+                  {children}
+                </SVGViewer>
+              )}
+              options={{
+                style: {
+                  roundHeader: {
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#374151'
+                  },
+                  connectorColor: '#000000',
+                  connectorColorHighlight: '#000000',
+                  boxHeight: 100
+                }
+              }}
             />
-          )}
-          svgWrapper={({ children, ...props }) => (
-            <SVGViewer 
-              width={1200} 
-              height={800} 
-              background="#FFFFFF"
-              SVGBackground="#FFFFFF"
-              {...props}
-            >
-              {children}
-            </SVGViewer>
-          )}
-          options={{
-            style: {
-              roundHeader: {
-                fontSize: 16,
-                fontWeight: 'bold',
-                color: '#374151'
-              },
-              connectorColor: '#000000',
-              connectorColorHighlight: '#000000',
-              boxHeight: 100
-            }
-          }}
-        />
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
 
-export default TournamentBracket; 
+export default TournamentBracket;

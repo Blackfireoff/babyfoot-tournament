@@ -280,11 +280,15 @@ async def start_tournament(
     if db_tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
     
-    success = crud.start_tournament(db=db, tournament_id=tournament_id)
-    if not success:
+    # Vérifier que l'utilisateur est le propriétaire du tournoi
+    if db_tournament.owner_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    matches = crud.start_tournament(db=db, tournament_id=tournament_id)
+    if not matches:
         raise HTTPException(status_code=400, detail="Failed to start tournament")
     
-    return {"message": "Tournament started successfully"}
+    return {"message": "Tournament started successfully", "matches": matches}
 
 # Routes pour les matchs
 @app.get("/api/tournaments/{tournament_id}/matches", response_model=List[schemas.Match])

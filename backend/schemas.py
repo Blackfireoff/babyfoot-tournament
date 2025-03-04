@@ -78,6 +78,7 @@ class Tournament(TournamentBase):
     status: str
     owner_id: int
     teams: List[TournamentTeam] = []
+    matches: List[Match] = []
 
     class Config:
         orm_mode = True

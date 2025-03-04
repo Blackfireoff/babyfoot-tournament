@@ -315,7 +315,7 @@ export const tournamentService = {
     const response = await fetch(`${API_URL}/matches/${matchId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ team1_score: team1Score, team2_score: team2Score })
+      body: JSON.stringify({ team1_score: parseInt(team1Score), team2_score: parseInt(team2Score) })
     });
     return handleResponse(response);
   }

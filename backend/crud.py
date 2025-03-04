@@ -185,18 +185,19 @@ def leave_tournament(db: Session, tournament_id: int, team_id: int):
 def start_tournament(db: Session, tournament_id: int):
     db_tournament = db.query(models.Tournament).filter(models.Tournament.id == tournament_id).first()
     if db_tournament is None:
-        return False
+        return []
     
     if db_tournament.status != "open":
-        return False  # Le tournoi n'est pas ouvert
+        return []  # Le tournoi n'est pas ouvert
     
     if len(db_tournament.teams) < 2:
-        return False  # Pas assez d'équipes
+        return []  # Pas assez d'équipes
     
     db_tournament.status = "in_progress"
     
     # Création des matchs du premier tour
     teams = db_tournament.teams
+    created_matches = []
     for i in range(0, len(teams), 2):
         if i + 1 < len(teams):
             match_id = f"round1-match{i//2+1}"
@@ -209,9 +210,10 @@ def start_tournament(db: Session, tournament_id: int):
                 match_number=i//2+1
             )
             db.add(db_match)
+            created_matches.append(db_match)
     
     db.commit()
-    return True
+    return created_matches
 
 # Opérations CRUD pour les matchs
 def get_match(db: Session, match_id: str):
