@@ -1,5 +1,7 @@
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { notificationService } from './services/api';
 
 // Pages
 import Home from './pages/Home';
@@ -10,9 +12,32 @@ import Tournaments from './pages/Tournaments';
 import TournamentDetails from './pages/TournamentDetails';
 import Scoreboard from './pages/Scoreboard';
 import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 
 function App() {
   const { user, logout, loading } = useAuth();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Vérifier les notifications non lues
+  useEffect(() => {
+    const checkNotifications = async () => {
+      if (!user) return;
+      
+      try {
+        const notifications = await notificationService.getUserNotifications(user.id);
+        const unread = notifications.filter(n => !n.is_read).length;
+        setUnreadNotifications(unread);
+      } catch (err) {
+        console.error('Erreur lors de la vérification des notifications:', err);
+      }
+    };
+
+    checkNotifications();
+    
+    // Vérifier les notifications toutes les 60 secondes
+    const interval = setInterval(checkNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Fonction pour protéger les routes
   const ProtectedRoute = ({ children }) => {
@@ -62,6 +87,17 @@ function App() {
                     className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-gray-300"
                   >
                     Classement
+                  </Link>
+                  <Link
+                    to="/notifications"
+                    className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-gray-300"
+                  >
+                    Notifications
+                    {unreadNotifications > 0 && (
+                      <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                        {unreadNotifications}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     to="/profile"
@@ -144,6 +180,14 @@ function App() {
             <Route
               path="/scoreboard"
               element={<Scoreboard />}
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/profile"

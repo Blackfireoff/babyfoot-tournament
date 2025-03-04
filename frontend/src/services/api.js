@@ -171,6 +171,34 @@ export const teamService = {
       throw new Error(error || 'Erreur lors de la suppression du joueur');
     }
     return true;
+  },
+
+  // Vérifier si un utilisateur existe
+  checkUserExists: async (username) => {
+    const response = await fetch(`${API_URL}/users/check/${username}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Inviter un joueur à rejoindre une équipe
+  invitePlayer: async (teamId, username) => {
+    const response = await fetch(`${API_URL}/teams/${teamId}/invite`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ username })
+    });
+    return handleResponse(response);
+  },
+  
+  // Répondre à une invitation d'équipe
+  respondToInvitation: async (playerId, accept) => {
+    const response = await fetch(`${API_URL}/players/${playerId}/respond`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ accept })
+    });
+    return handleResponse(response);
   }
 };
 
@@ -334,6 +362,36 @@ export const userService = {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(userData)
+    });
+    return handleResponse(response);
+  }
+};
+
+// Service pour les notifications
+export const notificationService = {
+  // Récupérer les notifications d'un utilisateur
+  getUserNotifications: async (userId) => {
+    const response = await fetch(`${API_URL}/users/${userId}/notifications`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Marquer une notification comme lue
+  markNotificationAsRead: async (notificationId) => {
+    const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Répondre à une invitation d'équipe
+  respondToInvitation: async (playerId, accept) => {
+    const response = await fetch(`${API_URL}/players/${playerId}/respond`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ accept })
     });
     return handleResponse(response);
   }

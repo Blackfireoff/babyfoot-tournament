@@ -12,6 +12,8 @@ function Teams() {
   const [newTeamName, setNewTeamName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [viewMode, setViewMode] = useState('all'); // 'all' ou 'mine'
+  const [usernameError, setUsernameError] = useState('');
+  const [invitationSuccess, setInvitationSuccess] = useState('');
 
   useEffect(() => {
     fetchTeams();
@@ -59,12 +61,32 @@ function Teams() {
 
   const handleAddPlayer = async (teamId) => {
     if (!newPlayerName) return;
+    
+    setUsernameError('');
+    setInvitationSuccess('');
 
     try {
-      const newPlayer = await teamService.addPlayer(teamId, {
-        name: newPlayerName,
-        is_starter: false
-      });
+      // Vérifier si le joueur est déjà dans l'équipe
+      const team = teams.find(t => t.id === teamId);
+      const playerExists = team.players.some(
+        player => player.name.toLowerCase() === newPlayerName.toLowerCase()
+      );
+      
+      if (playerExists) {
+        setUsernameError('Ce joueur est déjà dans l\'équipe');
+        return;
+      }
+      
+      // Vérifier si l'utilisateur existe
+      const checkResult = await teamService.checkUserExists(newPlayerName);
+      
+      if (!checkResult.exists) {
+        setUsernameError('Joueur inconnu');
+        return;
+      }
+      
+      // Inviter le joueur à rejoindre l'équipe
+      const newPlayer = await teamService.invitePlayer(teamId, newPlayerName);
 
       setTeams(teams.map(team => {
         if (team.id === teamId) {
@@ -76,10 +98,11 @@ function Teams() {
         return team;
       }));
 
+      setInvitationSuccess(`Invitation envoyée à ${newPlayerName}`);
       setNewPlayerName('');
     } catch (err) {
-      console.error('Error adding player:', err);
-      alert('Impossible d\'ajouter le joueur. Veuillez réessayer plus tard.');
+      console.error('Error inviting player:', err);
+      setUsernameError('Impossible d\'inviter le joueur. Veuillez réessayer plus tard.');
     }
   };
 
@@ -281,13 +304,20 @@ function Teams() {
                       {team.players.map((player) => (
                         <div key={player.id} className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${player.is_starter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              player.status === "pending" 
+                                ? 'bg-yellow-500' 
+                                : player.is_starter 
+                                  ? 'bg-green-500' 
+                                  : 'bg-gray-300'
+                            }`}></div>
                             <span className={player.is_starter ? 'font-medium text-gray-900' : 'text-gray-600'}>
                               {player.name}
                               {player.is_starter && ' (Titulaire)'}
+                              {player.status === "pending" && ' (En attente)'}
                             </span>
                           </div>
-                          {user && team.owner_id === user.id && (
+                          {user && team.owner_id === user.id && player.status === "active" && (
                             <button
                               onClick={() => togglePlayerStarter(team.id, player.id)}
                               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -312,16 +342,22 @@ function Teams() {
                             type="text"
                             value={newPlayerName}
                             onChange={(e) => setNewPlayerName(e.target.value)}
-                            placeholder="Ajouter un joueur"
+                            placeholder="Inviter un joueur par son pseudo"
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                           />
                           <button
                             type="submit"
                             className="ml-2 inline-flex items-center rounded-md border border-transparent bg-blue-600 px-3 py-2 text-sm font-medium leading-4 text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                           >
-                            Ajouter
+                            Inviter
                           </button>
                         </div>
+                        {usernameError && (
+                          <p className="mt-2 text-sm text-red-600">{usernameError}</p>
+                        )}
+                        {invitationSuccess && (
+                          <p className="mt-2 text-sm text-green-600">{invitationSuccess}</p>
+                        )}
                       </form>
                     )}
                   </div>

@@ -334,4 +334,92 @@ def get_user_matches(db: Session, user_id: int):
             "team": user_team.name
         })
     
-    return result 
+    return result
+
+# Fonctions pour vérifier si un utilisateur existe par son nom d'utilisateur
+def check_user_exists(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+# Fonctions pour les notifications
+def create_notification(db: Session, notification: schemas.NotificationCreate):
+    db_notification = models.Notification(**notification.dict())
+    db.add(db_notification)
+    db.commit()
+    db.refresh(db_notification)
+    return db_notification
+
+def get_user_notifications(db: Session, user_id: int):
+    return db.query(models.Notification).filter(models.Notification.user_id == user_id).all()
+
+def mark_notification_as_read(db: Session, notification_id: int):
+    db_notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
+    if db_notification:
+        db_notification.is_read = True
+        db.commit()
+        db.refresh(db_notification)
+    return db_notification
+
+# Fonctions pour les invitations de joueurs
+def invite_player_to_team(db: Session, team_id: int, username: str):
+    # Vérifier si l'utilisateur existe
+    user = check_user_exists(db, username)
+    if not user:
+        return None
+    
+    # Vérifier si le joueur est déjà dans l'équipe
+    existing_player = db.query(models.Player).filter(
+        models.Player.team_id == team_id,
+        models.Player.user_id == user.id
+    ).first()
+    
+    if existing_player:
+        return existing_player
+    
+    # Créer un nouveau joueur avec statut "pending"
+    team = get_team(db, team_id=team_id)
+    if not team:
+        return None
+    
+    player = models.Player(
+        name=username,
+        team_id=team_id,
+        user_id=user.id,
+        status="pending"
+    )
+    db.add(player)
+    db.commit()
+    db.refresh(player)
+    
+    # Créer une notification pour l'utilisateur invité
+    from datetime import datetime
+    import json
+    
+    notification = models.Notification(
+        user_id=user.id,
+        type="team_invitation",
+        content=f"Vous avez été invité à rejoindre l'équipe {team.name}",
+        is_read=False,
+        created_at=datetime.now().isoformat(),
+        data=json.dumps({
+            "team_id": team_id,
+            "player_id": player.id
+        })
+    )
+    db.add(notification)
+    db.commit()
+    
+    return player
+
+def respond_to_team_invitation(db: Session, player_id: int, accept: bool):
+    player = db.query(models.Player).filter(models.Player.id == player_id).first()
+    if not player:
+        return None
+    
+    if accept:
+        player.status = "active"
+    else:
+        player.status = "declined"
+    
+    db.commit()
+    db.refresh(player)
+    return player 

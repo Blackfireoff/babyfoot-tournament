@@ -6,13 +6,15 @@ from datetime import datetime
 class PlayerBase(BaseModel):
     name: str
     is_starter: bool = False
+    status: str = "active"
 
 class PlayerCreate(PlayerBase):
-    pass
+    user_id: Optional[int] = None
 
 class Player(PlayerBase):
     id: int
     team_id: int
+    user_id: Optional[int] = None
     goals: int = 0
     assists: int = 0
 
@@ -118,4 +120,23 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    username: Optional[str] = None 
+    username: Optional[str] = None
+
+# Schémas pour Notification
+class NotificationBase(BaseModel):
+    type: str
+    content: str
+    data: Optional[str] = None
+
+class NotificationCreate(NotificationBase):
+    user_id: int
+    created_at: str
+
+class Notification(NotificationBase):
+    id: int
+    user_id: int
+    is_read: bool = False
+    created_at: str
+
+    class Config:
+        orm_mode = True 

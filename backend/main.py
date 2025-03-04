@@ -376,6 +376,79 @@ async def update_user(
     
     return db_user
 
+# Route pour vérifier si un utilisateur existe
+@app.get("/api/users/check/{username}")
+async def check_username(username: str, db: Session = Depends(get_db)):
+    user = crud.check_user_exists(db, username=username)
+    return {"exists": user is not None}
+
+# Routes pour les invitations de joueurs
+@app.post("/api/teams/{team_id}/invite", response_model=schemas.Player)
+async def invite_player(
+    team_id: int, 
+    username: str = Body(..., embed=True), 
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Vérifier que l'utilisateur est le propriétaire de l'équipe
+    team = crud.get_team(db, team_id=team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    if team.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Inviter le joueur
+    player = crud.invite_player_to_team(db, team_id=team_id, username=username)
+    if not player:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return player
+
+# Routes pour les notifications
+@app.get("/api/users/{user_id}/notifications", response_model=List[schemas.Notification])
+async def get_notifications(
+    user_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    return crud.get_user_notifications(db, user_id=user_id)
+
+@app.put("/api/notifications/{notification_id}/read", response_model=schemas.Notification)
+async def mark_notification_read(
+    notification_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    notification = crud.mark_notification_as_read(db, notification_id=notification_id)
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    if notification.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    return notification
+
+# Route pour répondre à une invitation d'équipe
+@app.put("/api/players/{player_id}/respond", response_model=schemas.Player)
+async def respond_to_invitation(
+    player_id: int,
+    accept: bool = Body(..., embed=True),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    player = db.query(models.Player).filter(models.Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    if player.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    return crud.respond_to_team_invitation(db, player_id=player_id, accept=accept)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -43,9 +43,12 @@ class Player(Base):
     team_id = Column(Integer, ForeignKey("teams.id"))
     goals = Column(Integer, default=0)
     assists = Column(Integer, default=0)
+    status = Column(String, default="active")  # 'active', 'pending', 'declined'
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relations
     team = relationship("Team", back_populates="players")
+    user = relationship("User", backref="player_profiles")
 
 class Tournament(Base):
     __tablename__ = "tournaments"
@@ -75,4 +78,18 @@ class Match(Base):
     # Relations
     tournament = relationship("Tournament", back_populates="matches")
     team1 = relationship("Team", foreign_keys=[team1_id])
-    team2 = relationship("Team", foreign_keys=[team2_id]) 
+    team2 = relationship("Team", foreign_keys=[team2_id])
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    type = Column(String)  # 'team_invitation', etc.
+    content = Column(String)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(String)
+    data = Column(String)  # JSON data for additional information
+
+    # Relations
+    user = relationship("User", backref="notifications") 
