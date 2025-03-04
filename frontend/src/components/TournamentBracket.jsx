@@ -187,6 +187,45 @@ const TournamentBracket = ({ tournament }) => {
         }
       }
       
+      // Auto-valider les matchs avec une seule équipe
+      for (const round in matchesByRound) {
+        matchesByRound[round].forEach(match => {
+          // Si un match a une équipe mais pas l'autre, auto-valider
+          if ((match.team1_id && !match.team2_id) || (!match.team1_id && match.team2_id)) {
+            // Déterminer quelle équipe est présente
+            const winningTeamId = match.team1_id || match.team2_id;
+            const isTeam1 = !!match.team1_id;
+            
+            // Définir les scores pour auto-valider (1-0 ou 0-1)
+            match.team1_score = isTeam1 ? 1 : 0;
+            match.team2_score = isTeam1 ? 0 : 1;
+            
+            // Propager le gagnant au tour suivant si ce n'est pas déjà fait
+            const nextRound = parseInt(round) + 1;
+            const nextMatchNumber = Math.ceil(match.match_number / 2);
+            
+            // Vérifier si le tour suivant existe
+            if (matchesByRound[nextRound]) {
+              const nextMatch = matchesByRound[nextRound].find(m => m.match_number === nextMatchNumber);
+              if (nextMatch) {
+                // Déterminer si l'équipe gagnante doit être placée en team1 ou team2
+                if (match.match_number % 2 === 1) {
+                  // Match impair, placer en team1
+                  if (!nextMatch.team1_id) {
+                    nextMatch.team1_id = winningTeamId;
+                  }
+                } else {
+                  // Match pair, placer en team2
+                  if (!nextMatch.team2_id) {
+                    nextMatch.team2_id = winningTeamId;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
       // Traiter chaque tour
       for (let round = 1; round <= rounds; round++) {
         const roundMatches = matchesByRound[round] || [];

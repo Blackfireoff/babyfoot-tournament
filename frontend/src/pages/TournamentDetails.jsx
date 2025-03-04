@@ -120,11 +120,17 @@ function TournamentDetails() {
     }
     
     try {
-      await tournamentService.startTournament(tournament.id);
-      fetchTournament(); // Recharger les données du tournoi
+      setError(null);
+      const result = await tournamentService.startTournament(tournament.id);
+      console.log("Tournoi démarré avec succès:", result);
+      
+      // Attendre un court instant pour permettre au backend de traiter les données
+      setTimeout(() => {
+        fetchTournament(); // Recharger les données du tournoi
+      }, 1000);
     } catch (err) {
       console.error('Error starting tournament:', err);
-      alert('Impossible de démarrer le tournoi. Veuillez réessayer plus tard.');
+      setError(`Impossible de démarrer le tournoi: ${err.message || 'Erreur inconnue'}`);
     }
   };
 
@@ -158,7 +164,7 @@ function TournamentDetails() {
                 {new Date(tournament.startDate).toLocaleDateString('fr-FR')} - {tournament.endDate && new Date(tournament.endDate).toLocaleDateString('fr-FR')}
               </p>
             </div>
-            {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 2 && (
+            {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 1 && (
               <button
                 onClick={handleStartTournament}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, ForwardRef
 from datetime import datetime
 
 # Schémas pour Player
@@ -65,6 +65,25 @@ class TournamentTeam(BaseModel):
     class Config:
         orm_mode = True
 
+# Schémas pour Match - Déplacé avant Tournament pour éviter la référence circulaire
+class MatchBase(BaseModel):
+    tournament_id: int
+    team1_id: Optional[int] = None
+    team2_id: Optional[int] = None
+    round: int
+    match_number: int
+
+class MatchCreate(MatchBase):
+    pass
+
+class Match(MatchBase):
+    id: str
+    team1_score: Optional[int] = None
+    team2_score: Optional[int] = None
+
+    class Config:
+        orm_mode = True
+
 class TournamentBase(BaseModel):
     name: str
     date: str
@@ -79,25 +98,6 @@ class Tournament(TournamentBase):
     owner_id: int
     teams: List[TournamentTeam] = []
     matches: List[Match] = []
-
-    class Config:
-        orm_mode = True
-
-# Schémas pour Match
-class MatchBase(BaseModel):
-    tournament_id: int
-    team1_id: int
-    team2_id: int
-    round: int
-    match_number: int
-
-class MatchCreate(MatchBase):
-    pass
-
-class Match(MatchBase):
-    id: str
-    team1_score: Optional[int] = None
-    team2_score: Optional[int] = None
 
     class Config:
         orm_mode = True

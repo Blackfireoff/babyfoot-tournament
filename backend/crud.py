@@ -185,35 +185,185 @@ def leave_tournament(db: Session, tournament_id: int, team_id: int):
 def start_tournament(db: Session, tournament_id: int):
     db_tournament = db.query(models.Tournament).filter(models.Tournament.id == tournament_id).first()
     if db_tournament is None:
-        return []
+        raise ValueError(f"Tournament with ID {tournament_id} not found")
     
     if db_tournament.status != "open":
-        return []  # Le tournoi n'est pas ouvert
+        raise ValueError(f"Tournament cannot be started because it is in '{db_tournament.status}' status")
     
-    if len(db_tournament.teams) < 2:
-        return []  # Pas assez d'équipes
+    if len(db_tournament.teams) < 1:  # Permettre de démarrer avec au moins 1 équipe
+        raise ValueError("Tournament cannot be started with less than 1 team")
     
-    db_tournament.status = "in_progress"
-    
-    # Création des matchs du premier tour
-    teams = db_tournament.teams
-    created_matches = []
-    for i in range(0, len(teams), 2):
-        if i + 1 < len(teams):
-            match_id = f"round1-match{i//2+1}"
+    try:
+        # Vérifier si des matchs existent déjà pour ce tournoi
+        existing_matches = db.query(models.Match).filter(models.Match.tournament_id == tournament_id).all()
+        if existing_matches:
+            # Si des matchs existent déjà, supprimer tous les matchs existants
+            for match in existing_matches:
+                db.delete(match)
+            
+            # Commit pour s'assurer que les suppressions sont appliquées
+            db.commit()
+        
+        # Mettre à jour le statut du tournoi
+        db_tournament.status = "in_progress"
+        db.commit()
+        
+        # Création des matchs du premier tour
+        teams = db_tournament.teams
+        created_matches = []
+        
+        # Déterminer le nombre de tours nécessaires
+        max_teams = db_tournament.max_teams
+        rounds = 1
+        while 2**rounds < max_teams:
+            rounds += 1
+        
+        # Calculer le nombre de matchs pour le premier tour
+        first_round_matches = 2**(rounds-1)
+        
+        # Initialiser tous les matchs du premier tour
+        for i in range(first_round_matches):
+            match_id = f"round1-match{i+1}-tournament{tournament_id}"  # ID unique avec l'ID du tournoi
+            
+            # Vérifier si un match avec cet ID existe déjà
+            existing_match = db.query(models.Match).filter(models.Match.id == match_id).first()
+            if existing_match:
+                raise ValueError(f"Match with ID {match_id} already exists. Cannot create duplicate match.")
+            
             db_match = models.Match(
                 id=match_id,
                 tournament_id=tournament_id,
-                team1_id=teams[i].id,
-                team2_id=teams[i+1].id,
+                team1_id=None,
+                team2_id=None,
                 round=1,
-                match_number=i//2+1
+                match_number=i+1
             )
             db.add(db_match)
             created_matches.append(db_match)
-    
-    db.commit()
-    return created_matches
+        
+        # Commit pour s'assurer que les matchs sont créés avant de les modifier
+        db.commit()
+        
+        # Placer les équipes dans les matchs selon la logique décrite
+        for i, team in enumerate(teams):
+            position = i // 2  # Position dans la séquence (0, 1, 2, ...)
+            is_team1 = (i % 2 == 0)  # Positions paires sont team1, impaires sont team2
+            
+            if position < len(created_matches):
+                match = created_matches[position]
+                if is_team1:
+                    match.team1_id = team.id
+                else:
+                    match.team2_id = team.id
+        
+        # Commit pour s'assurer que les équipes sont placées
+        db.commit()
+        
+        # Auto-valider les matchs avec une seule équipe
+        for match in created_matches:
+            if (match.team1_id and not match.team2_id) or (not match.team1_id and match.team2_id):
+                # Si un match a une équipe mais pas l'autre, auto-valider
+                if match.team1_id:
+                    match.team1_score = 1
+                    match.team2_score = 0
+                else:
+                    match.team1_score = 0
+                    match.team2_score = 1
+        
+        # Commit pour s'assurer que les scores sont mis à jour
+        db.commit()
+        
+        # Créer les matchs des tours suivants
+        next_round_matches = []
+        for round_num in range(2, rounds + 1):
+            matches_in_round = 2**(rounds - round_num)
+            round_matches = []
+            
+            for i in range(matches_in_round):
+                match_id = f"round{round_num}-match{i+1}-tournament{tournament_id}"  # ID unique avec l'ID du tournoi
+                
+                # Vérifier si un match avec cet ID existe déjà
+                existing_match = db.query(models.Match).filter(models.Match.id == match_id).first()
+                if existing_match:
+                    raise ValueError(f"Match with ID {match_id} already exists. Cannot create duplicate match.")
+                
+                db_match = models.Match(
+                    id=match_id,
+                    tournament_id=tournament_id,
+                    team1_id=None,
+                    team2_id=None,
+                    round=round_num,
+                    match_number=i+1
+                )
+                db.add(db_match)
+                round_matches.append(db_match)
+            
+            next_round_matches.append(round_matches)
+        
+        # Commit pour s'assurer que tous les matchs sont créés
+        db.commit()
+        
+        # Propager les gagnants des matchs auto-validés aux tours suivants
+        matches_to_process = created_matches.copy()
+        processed_matches = []
+        
+        while matches_to_process:
+            current_match = matches_to_process.pop(0)
+            
+            # Si le match a déjà été traité, passer au suivant
+            if current_match.id in processed_matches:
+                continue
+            
+            processed_matches.append(current_match.id)
+            
+            # Si le match a un score, propager le gagnant
+            if current_match.team1_score is not None and current_match.team2_score is not None:
+                # Déterminer l'équipe gagnante
+                winning_team_id = current_match.team1_id if current_match.team1_score > current_match.team2_score else current_match.team2_id
+                
+                # Trouver le match du tour suivant
+                next_round = current_match.round + 1
+                next_match_number = (current_match.match_number + 1) // 2
+                
+                # Rechercher le match suivant
+                next_match = db.query(models.Match).filter(
+                    models.Match.tournament_id == tournament_id,
+                    models.Match.round == next_round,
+                    models.Match.match_number == next_match_number
+                ).first()
+                
+                if next_match:
+                    # Déterminer si l'équipe gagnante doit être placée en team1 ou team2
+                    if current_match.match_number % 2 == 1:
+                        # Match impair, placer en team1
+                        next_match.team1_id = winning_team_id
+                    else:
+                        # Match pair, placer en team2
+                        next_match.team2_id = winning_team_id
+                    
+                    # Vérifier si le match suivant a maintenant une seule équipe (et pas l'autre)
+                    if (next_match.team1_id and not next_match.team2_id) or (not next_match.team1_id and next_match.team2_id):
+                        # Auto-valider ce match
+                        if next_match.team1_id:
+                            next_match.team1_score = 1
+                            next_match.team2_score = 0
+                        else:
+                            next_match.team1_score = 0
+                            next_match.team2_score = 1
+                        
+                        # Ajouter ce match à la liste des matchs à traiter
+                        matches_to_process.append(next_match)
+        
+        # Commit final pour s'assurer que toutes les modifications sont enregistrées
+        db.commit()
+        
+        # Récupérer tous les matchs créés pour les renvoyer
+        all_matches = db.query(models.Match).filter(models.Match.tournament_id == tournament_id).all()
+        return all_matches
+    except Exception as e:
+        # En cas d'erreur, annuler les modifications et relancer l'exception
+        db.rollback()
+        raise ValueError(f"Error starting tournament: {str(e)}")
 
 # Opérations CRUD pour les matchs
 def get_match(db: Session, match_id: str):
@@ -229,6 +379,59 @@ def update_match_score(db: Session, match_id: str, team1_score: int, team2_score
     
     db_match.team1_score = team1_score
     db_match.team2_score = team2_score
+    
+    # Déterminer l'équipe gagnante
+    winning_team_id = None
+    if team1_score > team2_score:
+        winning_team_id = db_match.team1_id
+    elif team2_score > team1_score:
+        winning_team_id = db_match.team2_id
+    
+    # Si un gagnant est déterminé, le propager au tour suivant
+    if winning_team_id:
+        # Extraire le numéro du tour et du match
+        round_num = db_match.round
+        match_num = db_match.match_number
+        tournament_id = db_match.tournament_id
+        
+        # Calculer le numéro du match au tour suivant
+        next_round = round_num + 1
+        next_match_number = (match_num + 1) // 2
+        
+        # Trouver le match du tour suivant
+        next_match = db.query(models.Match).filter(
+            models.Match.tournament_id == tournament_id,
+            models.Match.round == next_round,
+            models.Match.match_number == next_match_number
+        ).first()
+        
+        if next_match:
+            # Déterminer si l'équipe gagnante doit être placée en team1 ou team2
+            if match_num % 2 == 1:
+                # Match impair, placer en team1
+                next_match.team1_id = winning_team_id
+            else:
+                # Match pair, placer en team2
+                next_match.team2_id = winning_team_id
+            
+            # Vérifier si le match suivant a maintenant une seule équipe (et pas l'autre)
+            if (next_match.team1_id and not next_match.team2_id) or (not next_match.team1_id and next_match.team2_id):
+                # Auto-valider ce match
+                if next_match.team1_id:
+                    next_match.team1_score = 1
+                    next_match.team2_score = 0
+                else:
+                    next_match.team1_score = 0
+                    next_match.team2_score = 1
+                
+                # Propager récursivement ce gagnant au tour suivant
+                update_match_score(
+                    db, 
+                    next_match.id, 
+                    next_match.team1_score, 
+                    next_match.team2_score
+                )
+    
     db.commit()
     db.refresh(db_match)
     return db_match

@@ -4,29 +4,35 @@ const API_URL = 'http://localhost:8000/api';
 // Fonction utilitaire pour gérer les erreurs de fetch
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
-      detail: `Erreur HTTP: ${response.status}`
-    }));
+    let errorMessage = `Erreur HTTP: ${response.status}`;
     
-    // Formater le message d'erreur pour qu'il soit plus lisible
-    let errorMessage = errorData.detail || 'Une erreur est survenue';
-    
-    // Si c'est une erreur de validation (422), essayer d'extraire les détails
-    if (response.status === 422 && errorData.detail) {
-      if (typeof errorData.detail === 'object') {
-        // Si detail est un objet, essayer de le formater
-        try {
-          errorMessage = Object.entries(errorData.detail)
-            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
-            .join('; ');
-        } catch (e) {
-          console.error('Erreur lors du formatage des détails d\'erreur:', e);
-        }
+    try {
+      const errorData = await response.json();
+      
+      // Formater le message d'erreur pour qu'il soit plus lisible
+      if (errorData.detail) {
+        errorMessage = typeof errorData.detail === 'string' 
+          ? errorData.detail 
+          : JSON.stringify(errorData.detail);
+      }
+    } catch (e) {
+      // Si la réponse n'est pas du JSON, utiliser le texte brut
+      try {
+        errorMessage = await response.text();
+      } catch (textError) {
+        // Si on ne peut pas lire le texte, utiliser le message par défaut
+        console.error('Erreur lors de la lecture de la réponse d\'erreur:', textError);
       }
     }
     
     throw new Error(errorMessage);
   }
+  
+  // Pour les réponses 204 No Content, retourner un objet vide
+  if (response.status === 204) {
+    return {};
+  }
+  
   return response.json();
 };
 
