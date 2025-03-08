@@ -199,7 +199,12 @@ function PlayerProfile() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {team.name}
+                            <Link 
+                              to={`/teams/${team.id}`}
+                              className="hover:text-blue-600 hover:underline"
+                            >
+                              {team.name}
+                            </Link>
                           </p>
                           <p className="text-sm text-gray-500 truncate">
                             {team.players?.length || 0} joueurs
@@ -207,7 +212,7 @@ function PlayerProfile() {
                         </div>
                         <div>
                           <Link
-                            to={`/teams?highlight=${team.id}`}
+                            to={`/teams/${team.id}`}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
                           >
                             Voir l'équipe

@@ -149,7 +149,17 @@ function TeamProfile() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{team.name}</h1>
                 <p className="text-sm font-medium text-gray-500">
-                  {owner ? `Propriétaire: ${owner.username}` : 'Propriétaire inconnu'}
+                  {owner ? (
+                    <>
+                      Propriétaire: 
+                      <Link 
+                        to={`/profile`} 
+                        className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {owner.username}
+                      </Link>
+                    </>
+                  ) : 'Propriétaire inconnu'}
                 </p>
               </div>
             </div>
@@ -275,7 +285,12 @@ function TeamProfile() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {player.name}
+                            <Link 
+                              to={`/players/${player.id}`}
+                              className="hover:text-blue-600 hover:underline"
+                            >
+                              {player.name}
+                            </Link>
                           </p>
                           <p className="text-sm text-gray-500 truncate">
                             {player.is_starter ? 'Titulaire' : 'Remplaçant'}
