@@ -388,7 +388,12 @@ function TournamentDetails() {
                     {team.logo && (
                       <img src={team.logo} alt={team.name} className="w-8 h-8 mr-3" />
                     )}
-                    <span className="font-medium">{team.name}</span>
+                    <Link 
+                      to={`/teams/${team.id}`}
+                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {team.name}
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 const MatchScoreRow = ({ match, team1, team2, onUpdateScore, allMatches }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -84,7 +85,14 @@ const MatchScoreRow = ({ match, team1, team2, onUpdateScore, allMatches }) => {
             <img src={team1.logo} alt={team1.name} className="w-8 h-8 mr-3" />
           )}
           <div className="text-sm font-medium text-gray-900">
-            {team1 ? team1.name : 'À déterminer'}
+            {team1 ? (
+              <Link 
+                to={`/teams/${team1.id}`}
+                className="text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                {team1.name}
+              </Link>
+            ) : 'À déterminer'}
           </div>
         </div>
       </td>
@@ -111,7 +119,14 @@ const MatchScoreRow = ({ match, team1, team2, onUpdateScore, allMatches }) => {
             <img src={team2.logo} alt={team2.name} className="w-8 h-8 mr-3" />
           )}
           <div className="text-sm font-medium text-gray-900">
-            {team2 ? team2.name : 'À déterminer'}
+            {team2 ? (
+              <Link 
+                to={`/teams/${team2.id}`}
+                className="text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                {team2.name}
+              </Link>
+            ) : 'À déterminer'}
           </div>
         </div>
       </td>

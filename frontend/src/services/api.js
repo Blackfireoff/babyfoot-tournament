@@ -239,6 +239,30 @@ export const teamService = {
       headers: getAuthHeaders()
     });
     return handleResponse(response);
+  },
+
+  // Récupérer le propriétaire d'une équipe
+  getTeamOwner: async (userId) => {
+    const response = await fetch(`${API_URL}/users/${userId}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Récupérer les tournois d'une équipe
+  getTeamTournaments: async (teamId) => {
+    const response = await fetch(`${API_URL}/teams/${teamId}/tournaments`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Récupérer les matchs d'une équipe
+  getTeamMatches: async (teamId) => {
+    const response = await fetch(`${API_URL}/teams/${teamId}/matches`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
   }
 };
 

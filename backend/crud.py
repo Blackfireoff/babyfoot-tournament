@@ -719,4 +719,46 @@ def respond_to_team_invitation(db: Session, player_id: int, accept: bool):
     
     db.commit()
     db.refresh(player)
-    return player 
+    return player
+
+def get_team_tournaments(db: Session, team_id: int):
+    # Récupérer les tournois auxquels l'équipe participe
+    team_tournaments = db.query(models.TournamentTeam).filter(models.TournamentTeam.team_id == team_id).all()
+    tournament_ids = [tt.tournament_id for tt in team_tournaments]
+    
+    # Récupérer les détails des tournois
+    tournaments = db.query(models.Tournament).filter(models.Tournament.id.in_(tournament_ids)).all()
+    return tournaments
+
+def get_team_matches(db: Session, team_id: int):
+    # Récupérer tous les matchs où l'équipe est impliquée (équipe 1 ou équipe 2)
+    matches = db.query(models.Match).filter(
+        (models.Match.team1_id == team_id) | (models.Match.team2_id == team_id)
+    ).all()
+    
+    result = []
+    for match in matches:
+        # Récupérer les noms des équipes
+        team1 = db.query(models.Team).filter(models.Team.id == match.team1_id).first()
+        team2 = db.query(models.Team).filter(models.Team.id == match.team2_id).first()
+        
+        # Récupérer le nom du tournoi
+        tournament = db.query(models.Tournament).filter(models.Tournament.id == match.tournament_id).first()
+        
+        match_data = {
+            "id": match.id,
+            "tournament_id": match.tournament_id,
+            "tournament_name": tournament.name if tournament else None,
+            "team1_id": match.team1_id,
+            "team1_name": team1.name if team1 else None,
+            "team2_id": match.team2_id,
+            "team2_name": team2.name if team2 else None,
+            "team1_score": match.team1_score,
+            "team2_score": match.team2_score,
+            "round": match.round,
+            "match_number": match.match_number,
+            "date": match.date.isoformat() if match.date else None
+        }
+        result.append(match_data)
+    
+    return result 

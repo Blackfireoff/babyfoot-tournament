@@ -136,7 +136,12 @@ function Scoreboard() {
                           {index + 1}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {team.name}
+                          <Link 
+                            to={`/teams/${team.id}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {team.name}
+                          </Link>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {team.wins}

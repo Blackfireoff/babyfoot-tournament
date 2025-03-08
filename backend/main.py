@@ -585,6 +585,34 @@ async def check_tournament_completed_endpoint(
             detail=f"Error checking tournament status: {str(e)}"
         )
 
+@app.get("/api/teams/{team_id}/tournaments", response_model=List[schemas.Tournament])
+async def get_team_tournaments(
+    team_id: int,
+    db: Session = Depends(get_db)
+):
+    # Vérifier que l'équipe existe
+    team = crud.get_team(db, team_id=team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Récupérer les tournois de l'équipe
+    tournaments = crud.get_team_tournaments(db, team_id=team_id)
+    return tournaments
+
+@app.get("/api/teams/{team_id}/matches")
+async def get_team_matches(
+    team_id: int,
+    db: Session = Depends(get_db)
+):
+    # Vérifier que l'équipe existe
+    team = crud.get_team(db, team_id=team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Récupérer les matchs de l'équipe
+    matches = crud.get_team_matches(db, team_id=team_id)
+    return matches
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

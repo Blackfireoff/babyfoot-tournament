@@ -15,6 +15,7 @@ import Scoreboard from './pages/Scoreboard';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import PlayerProfile from './pages/PlayerProfile';
+import TeamProfile from './pages/TeamProfile';
 
 function App() {
   const { user, logout, loading } = useAuth();
@@ -210,6 +211,10 @@ function App() {
             <Route
               path="/players/:playerId"
               element={<PlayerProfile />}
+            />
+            <Route
+              path="/teams/:teamId"
+              element={<TeamProfile />}
             />
           </Routes>
         )}

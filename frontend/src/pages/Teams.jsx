@@ -282,18 +282,29 @@ function Teams() {
           <div className="px-6 py-4">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredTeams.map((team) => (
-                <div key={team.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">{team.name}</h3>
-                      {user && team.owner_id === user.id && (
-                        <button
-                          onClick={() => handleDeleteTeam(team.id)}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                <div key={team.id} className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                        <Link 
+                          to={`/teams/${team.id}`}
+                          className="hover:text-blue-600 hover:underline"
                         >
-                          Supprimer
-                        </button>
-                      )}
+                          {team.name}
+                        </Link>
+                      </h3>
+                      <div className="flex space-x-2">
+                        {user && team.owner_id === user.id && (
+                          <>
+                            <button
+                              onClick={() => handleDeleteTeam(team.id)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
+                            >
+                              Supprimer
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <p className="mt-1 max-w-2xl text-sm text-gray-500">
                       {user && team.owner_id === user.id ? 'Votre équipe' : 'Équipe d\'un autre utilisateur'}
