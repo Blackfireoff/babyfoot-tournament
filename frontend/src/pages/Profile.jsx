@@ -36,9 +36,18 @@ function Profile() {
       // Charger les matchs de l'utilisateur
       const matchesData = await userService.getUserMatches(user.id);
       
-      // Filtrer les matchs à venir (date future)
+      // Filtrer les matchs à venir (date future) et non terminés (sans score)
       const now = new Date();
-      const upcoming = matchesData.filter(match => new Date(match.date) > now);
+      const upcoming = matchesData.filter(match => {
+        // Vérifier si la date est dans le futur
+        const isFutureDate = new Date(match.date) > now;
+        
+        // Vérifier si le match n'est pas terminé (pas de score)
+        const isNotCompleted = match.team1_score === null && match.team2_score === null;
+        
+        // Retourner uniquement les matchs à venir et non terminés
+        return isFutureDate && isNotCompleted;
+      });
       setUpcomingMatches(upcoming);
 
       // Calculer les statistiques
@@ -169,10 +178,10 @@ function Profile() {
                         <div className="relative focus-within:ring-2 focus-within:ring-blue-500">
                           <h3 className="text-sm font-semibold text-gray-800">
                             <span className="absolute inset-0" aria-hidden="true" />
-                            {match.tournamentName}
+                            {match.tournament}
                           </h3>
                           <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                            {match.team1Name} vs {match.team2Name}
+                            {match.team} vs {match.opponent}
                           </p>
                           <p className="mt-1 text-sm text-gray-500">
                             {new Date(match.date).toLocaleString('fr-FR', {
