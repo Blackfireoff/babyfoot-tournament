@@ -7,9 +7,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     volumes:
-      - type: volume
-        source: backend_data
-        target: /app/data
+      - backend_data:/app/data
     ports:
       - "8000:8000"
     environment:
@@ -39,4 +37,7 @@ networks:
 
 volumes:
   backend_data:
-    driver: local 
+    driver_opts:
+      type: none
+      o: "bind"
+      device: "/deploy/babyfoot-backend-data" 
