@@ -420,42 +420,61 @@ def update_match_score(db: Session, match_id: str, team1_score: int, team2_score
     if db_match is None:
         return None
     
-    # Vérifier que les deux équipes sont présentes
-    if db_match.team1_id is None or db_match.team2_id is None:
-        raise ValueError("Impossible de mettre à jour le score : une ou plusieurs équipes manquantes")
+    # Vérifier si les équipes sont présentes
+    has_team1 = db_match.team1_id is not None
+    has_team2 = db_match.team2_id is not None
     
-    # Si ce n'est pas un match du premier tour, vérifier que les matchs précédents sont terminés
-    if db_match.round > 1:
-        # Calculer les numéros des matchs précédents
-        prev_round = db_match.round - 1
-        match_num = db_match.match_number
-        tournament_id = db_match.tournament_id
-        
-        # Les deux matchs précédents qui alimentent ce match
-        prev_match_num1 = match_num * 2 - 1
-        prev_match_num2 = match_num * 2
-        
-        # Vérifier que ces matchs existent et sont terminés
-        prev_matches = db.query(models.Match).filter(
-            models.Match.tournament_id == tournament_id,
-            models.Match.round == prev_round,
-            models.Match.match_number.in_([prev_match_num1, prev_match_num2])
-        ).all()
-        
-        # Vérifier que tous les matchs précédents ont des scores
-        for prev_match in prev_matches:
-            if prev_match.team1_score is None or prev_match.team2_score is None:
-                raise ValueError(f"Impossible de mettre à jour le score : le match précédent (Round {prev_match.round}, Match {prev_match.match_number}) n'est pas terminé")
+    # Si les deux équipes sont manquantes ou si une équipe est manquante,
+    # vérifier si les matchs précédents sont terminés
+    if not has_team1 or not has_team2:
+        # Si ce n'est pas un match du premier tour, vérifier que les matchs précédents sont terminés
+        if db_match.round > 1:
+            # Calculer les numéros des matchs précédents
+            prev_round = db_match.round - 1
+            match_num = db_match.match_number
+            tournament_id = db_match.tournament_id
+            
+            # Les deux matchs précédents qui alimentent ce match
+            prev_match_num1 = match_num * 2 - 1
+            prev_match_num2 = match_num * 2
+            
+            # Vérifier que ces matchs existent et sont terminés
+            prev_matches = db.query(models.Match).filter(
+                models.Match.tournament_id == tournament_id,
+                models.Match.round == prev_round,
+                models.Match.match_number.in_([prev_match_num1, prev_match_num2])
+            ).all()
+            
+            # Vérifier si tous les matchs précédents sont terminés
+            for prev_match in prev_matches:
+                if prev_match.team1_score is None or prev_match.team2_score is None:
+                    raise ValueError(f"Impossible de mettre à jour le score : le match précédent (Round {prev_match.round}, Match {prev_match.match_number}) n'est pas terminé")
     
-    db_match.team1_score = team1_score
-    db_match.team2_score = team2_score
-    
-    # Déterminer l'équipe gagnante
-    winning_team_id = None
-    if team1_score > team2_score:
+    # Si les deux équipes sont présentes, mettre à jour normalement
+    if has_team1 and has_team2:
+        db_match.team1_score = team1_score
+        db_match.team2_score = team2_score
+        
+        # Déterminer l'équipe gagnante
+        winning_team_id = None
+        if team1_score > team2_score:
+            winning_team_id = db_match.team1_id
+        elif team2_score > team1_score:
+            winning_team_id = db_match.team2_id
+    # Si une seule équipe est présente, elle est automatiquement gagnante
+    elif has_team1 and not has_team2:
+        db_match.team1_score = 1
+        db_match.team2_score = 0
         winning_team_id = db_match.team1_id
-    elif team2_score > team1_score:
+    elif not has_team1 and has_team2:
+        db_match.team1_score = 0
+        db_match.team2_score = 1
         winning_team_id = db_match.team2_id
+    # Si aucune équipe n'est présente, pas de gagnant
+    else:
+        db_match.team1_score = 0
+        db_match.team2_score = 0
+        winning_team_id = None
     
     # Mettre à jour les victoires de l'équipe gagnante et de ses joueurs
     if winning_team_id:

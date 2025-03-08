@@ -196,6 +196,28 @@ function TournamentDetails() {
     }
   };
 
+  const canShowMatchScores = (match) => {
+    if (match.round === 1) return true; // Premier tour, pas de matchs précédents
+    
+    // Calculer les numéros des matchs précédents
+    const prevRound = match.round - 1;
+    const matchNum = match.match_number;
+    const prevMatchNum1 = matchNum * 2 - 1;
+    const prevMatchNum2 = matchNum * 2;
+    
+    // Vérifier que ces matchs existent et sont terminés
+    const prevMatches = tournament.matches.filter(m => 
+      m.round === prevRound && 
+      (m.match_number === prevMatchNum1 || m.match_number === prevMatchNum2)
+    );
+    
+    // Si on ne trouve pas les matchs précédents, on considère qu'ils ne sont pas terminés
+    if (prevMatches.length === 0) return false;
+    
+    // Vérifier que tous les matchs précédents ont des scores
+    return prevMatches.every(m => m.team1_score !== null && m.team2_score !== null);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
@@ -347,22 +369,16 @@ function TournamentDetails() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {tournament.matches.map((match) => {
-                      // Trouver les équipes correspondantes
-                      const team1 = tournament.teams.find(t => t.id === match.team1_id);
-                      const team2 = tournament.teams.find(t => t.id === match.team2_id);
-                      
-                      return (
-                        <MatchScoreRow 
-                          key={match.id} 
-                          match={match} 
-                          team1={team1} 
-                          team2={team2} 
-                          onUpdateScore={handleUpdateScore}
-                          allMatches={tournament.matches}
-                        />
-                      );
-                    })}
+                    {tournament.matches.map((match) => (
+                      <MatchScoreRow
+                        key={match.id}
+                        match={match}
+                        teams={tournament.teams}
+                        onUpdateScore={handleUpdateScore}
+                        canShowScores={canShowMatchScores(match)}
+                        isMatchComplete={match.team1_score !== null && match.team2_score !== null}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>

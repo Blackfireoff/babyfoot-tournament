@@ -378,10 +378,7 @@ async def update_match_score(
         print(f"Error updating match score: {str(e)}\n{error_details}")
         
         # Renvoyer une erreur plus détaillée
-        raise HTTPException(
-            status_code=500, 
-            detail=f"An error occurred while updating the match score: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Une erreur s'est produite lors de la mise à jour du score: {str(e)}")
 
 # Routes pour le classement
 @app.get("/api/scoreboard/teams", response_model=List[schemas.ScoreboardTeam])
