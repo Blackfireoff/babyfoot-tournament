@@ -807,7 +807,7 @@ def respond_to_team_invitation(db: Session, player_id: int, accept: bool):
 
 def get_team_tournaments(db: Session, team_id: int):
     # Récupérer les tournois auxquels l'équipe participe
-    team_tournaments = db.query(models.TournamentTeam).filter(models.TournamentTeam.team_id == team_id).all()
+    team_tournaments = db.query(models.tournament_team).filter(models.tournament_team.c.team_id == team_id).all()
     tournament_ids = [tt.tournament_id for tt in team_tournaments]
     
     # Récupérer les détails des tournois
@@ -841,7 +841,7 @@ def get_team_matches(db: Session, team_id: int):
             "team2_score": match.team2_score,
             "round": match.round,
             "match_number": match.match_number,
-            "date": match.date.isoformat() if match.date else None
+            "date": tournament.date if tournament else None
         }
         result.append(match_data)
     
