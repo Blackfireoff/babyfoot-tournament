@@ -130,7 +130,23 @@ function TournamentDetails() {
       }, 1000);
     } catch (err) {
       console.error('Error starting tournament:', err);
-      setError(`Impossible de démarrer le tournoi: ${err.message || 'Erreur inconnue'}`);
+      setError(`Erreur lors du démarrage du tournoi: ${err.message || 'Erreur inconnue'}`);
+    }
+  };
+
+  const handleCheckTournamentCompleted = async () => {
+    try {
+      setError(null);
+      setRefreshing(true);
+      const result = await tournamentService.checkTournamentCompleted(tournament.id);
+      console.log("Vérification du statut du tournoi:", result);
+      
+      // Recharger les données du tournoi
+      fetchTournament();
+    } catch (err) {
+      console.error('Error checking tournament status:', err);
+      setError(`Erreur lors de la vérification du statut du tournoi: ${err.message || 'Erreur inconnue'}`);
+      setRefreshing(false);
     }
   };
 
@@ -197,14 +213,24 @@ function TournamentDetails() {
                 {new Date(tournament.startDate).toLocaleDateString('fr-FR')} - {tournament.endDate && new Date(tournament.endDate).toLocaleDateString('fr-FR')}
               </p>
             </div>
-            {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 1 && (
-              <button
-                onClick={handleStartTournament}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Démarrer le tournoi
-              </button>
-            )}
+            <div className="flex space-x-2">
+              {user && tournament.owner_id === user.id && tournament.status === 'open' && tournament.teams.length >= 1 && (
+                <button
+                  onClick={handleStartTournament}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Démarrer le tournoi
+                </button>
+              )}
+              {user && tournament.status === 'in_progress' && (tournament.owner_id === user.id || user.isAdmin) && (
+                <button
+                  onClick={handleCheckTournamentCompleted}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Vérifier si terminé
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="border-t border-gray-200">

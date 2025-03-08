@@ -79,20 +79,33 @@ for team_data in teams:
 
 # Ajouter des joueurs aux équipes
 players = [
-    {"name": "Joueur 1", "team_id": created_teams[0].id, "is_starter": True, "user_id": created_users[0].id},
-    {"name": "Joueur 2", "team_id": created_teams[0].id, "is_starter": True},
-    {"name": "Joueur 3", "team_id": created_teams[1].id, "is_starter": True, "user_id": created_users[1].id},
-    {"name": "Joueur 4", "team_id": created_teams[1].id, "is_starter": True},
-    {"name": "Joueur 5", "team_id": created_teams[2].id, "is_starter": True, "user_id": created_users[2].id},
-    {"name": "Joueur 6", "team_id": created_teams[2].id, "is_starter": True},
-    {"name": "Joueur 7", "team_id": created_teams[3].id, "is_starter": True, "user_id": created_users[3].id},
-    {"name": "Joueur 8", "team_id": created_teams[3].id, "is_starter": True},
+    # Équipe 1: Les Invincibles
+    {"name": "KingFoot", "team_id": created_teams[0].id, "is_starter": True, "user_id": created_users[0].id},
+    {"name": "StrikerPro", "team_id": created_teams[0].id, "is_starter": True},
+    {"name": "DefenderX", "team_id": created_teams[0].id, "is_starter": False},
+    
+    # Équipe 2: Dream Team
+    {"name": "FootballWizard", "team_id": created_teams[1].id, "is_starter": True, "user_id": created_users[1].id},
+    {"name": "GoalMachine", "team_id": created_teams[1].id, "is_starter": True},
+    {"name": "MidFieldMaster", "team_id": created_teams[1].id, "is_starter": False},
+    
+    # Équipe 3: Les Challengers
+    {"name": "BabyFootKing", "team_id": created_teams[2].id, "is_starter": True, "user_id": created_users[2].id},
+    {"name": "TableTitan", "team_id": created_teams[2].id, "is_starter": True},
+    {"name": "SpinMaster", "team_id": created_teams[2].id, "is_starter": False},
+    
+    # Équipe 4: Les Pros
+    {"name": "LegendFoot", "team_id": created_teams[3].id, "is_starter": True, "user_id": created_users[3].id},
+    {"name": "ProSpinner", "team_id": created_teams[3].id, "is_starter": True},
+    {"name": "RodControl", "team_id": created_teams[3].id, "is_starter": False},
 ]
 
+created_players = []
 for player_data in players:
     team_id = player_data.pop("team_id")
     player = schemas.PlayerCreate(**player_data)
     db_player = crud.create_player(db, player, team_id)
+    created_players.append(db_player)
     print(f"Joueur créé: {db_player.name} pour l'équipe {team_id}")
 
 # Créer des tournois de test
@@ -114,7 +127,7 @@ tournaments = [
         "date": datetime.now().strftime("%Y-%m-%d"),
         "max_teams": 4,
         "owner_id": created_users[0].id,
-        "status": "in_progress"
+        "status": "open"
     },
 ]
 
@@ -151,15 +164,117 @@ for team in created_teams:
 
 # Générer des matchs pour le tournoi en cours
 tournament_in_progress = created_tournaments[2]
-matches = crud.start_tournament(db, tournament_in_progress.id)
-print(f"Matchs générés pour le tournoi {tournament_in_progress.name}")
+
+# Mettre à jour le statut du tournoi à "in_progress" après avoir inscrit les équipes
+db_tournament = db.query(models.Tournament).filter(models.Tournament.id == tournament_in_progress.id).first()
+db_tournament.status = "in_progress"
+db.commit()
+db.refresh(db_tournament)
+print(f"Statut du tournoi {tournament_in_progress.name} mis à jour à 'in_progress'")
+
+# Créer manuellement des matchs pour le tournoi en cours
+# Nous ne pouvons pas utiliser start_tournament car le tournoi est déjà en cours
+match1_id = f"T{tournament_in_progress.id}_R1_M1"
+match1 = models.Match(
+    id=match1_id,
+    tournament_id=tournament_in_progress.id,
+    team1_id=created_teams[0].id,
+    team2_id=created_teams[1].id,
+    round=1,
+    match_number=1
+)
+db.add(match1)
+
+match2_id = f"T{tournament_in_progress.id}_R1_M2"
+match2 = models.Match(
+    id=match2_id,
+    tournament_id=tournament_in_progress.id,
+    team1_id=created_teams[2].id,
+    team2_id=created_teams[3].id,
+    round=1,
+    match_number=2
+)
+db.add(match2)
+db.commit()
+print(f"Matchs créés manuellement pour le tournoi {tournament_in_progress.name}")
 
 # Ajouter quelques scores pour les matchs du premier tour
-if matches:
-    # Premier match: équipe 1 vs équipe 2
-    first_match = matches[0]
-    crud.update_match_score(db, first_match.id, 5, 3)
-    print(f"Score mis à jour pour le match {first_match.id}: 5-3")
+crud.update_match_score(db, match1_id, 5, 3)
+print(f"Score mis à jour pour le match {match1_id}: 5-3")
+
+crud.update_match_score(db, match2_id, 2, 4)
+print(f"Score mis à jour pour le match {match2_id}: 2-4")
+
+# Ajouter manuellement des victoires pour simuler des matchs passés
+# Équipe 1: 3 victoires
+conn = sqlite3.connect(DB_NAME)
+cursor = conn.cursor()
+cursor.execute("UPDATE teams SET wins = 3 WHERE id = ?", (created_teams[0].id,))
+conn.commit()
+
+# Équipe 2: 2 victoires
+cursor.execute("UPDATE teams SET wins = 2 WHERE id = ?", (created_teams[1].id,))
+conn.commit()
+
+# Équipe 3: 1 victoire
+cursor.execute("UPDATE teams SET wins = 1 WHERE id = ?", (created_teams[2].id,))
+conn.commit()
+
+# Équipe 4: 1 victoire
+cursor.execute("UPDATE teams SET wins = 1 WHERE id = ?", (created_teams[3].id,))
+conn.commit()
+
+# Mettre à jour les victoires des joueurs avec des scores variés
+# Joueur 1: 10 victoires
+cursor.execute("UPDATE players SET wins = 10 WHERE id = ?", (created_players[0].id,))
+conn.commit()
+
+# Joueur 2: 8 victoires
+cursor.execute("UPDATE players SET wins = 8 WHERE id = ?", (created_players[1].id,))
+conn.commit()
+
+# Joueur 3: 7 victoires
+cursor.execute("UPDATE players SET wins = 7 WHERE id = ?", (created_players[2].id,))
+conn.commit()
+
+# Joueur 4: 6 victoires
+cursor.execute("UPDATE players SET wins = 6 WHERE id = ?", (created_players[3].id,))
+conn.commit()
+
+# Joueur 5: 5 victoires
+cursor.execute("UPDATE players SET wins = 5 WHERE id = ?", (created_players[4].id,))
+conn.commit()
+
+# Joueur 6: 5 victoires
+cursor.execute("UPDATE players SET wins = 5 WHERE id = ?", (created_players[5].id,))
+conn.commit()
+
+# Joueur 7: 4 victoires
+cursor.execute("UPDATE players SET wins = 4 WHERE id = ?", (created_players[6].id,))
+conn.commit()
+
+# Joueur 8: 3 victoires
+cursor.execute("UPDATE players SET wins = 3 WHERE id = ?", (created_players[7].id,))
+conn.commit()
+
+# Joueur 9: 2 victoires
+cursor.execute("UPDATE players SET wins = 2 WHERE id = ?", (created_players[8].id,))
+conn.commit()
+
+# Joueur 10: 2 victoires
+cursor.execute("UPDATE players SET wins = 2 WHERE id = ?", (created_players[9].id,))
+conn.commit()
+
+# Joueur 11: 1 victoire
+cursor.execute("UPDATE players SET wins = 1 WHERE id = ?", (created_players[10].id,))
+conn.commit()
+
+# Joueur 12: 0 victoire (débutant)
+cursor.execute("UPDATE players SET wins = 0 WHERE id = ?", (created_players[11].id,))
+conn.commit()
+
+conn.close()
+print("Victoires ajoutées aux équipes et aux joueurs")
 
 # Créer des notifications
 notifications = [

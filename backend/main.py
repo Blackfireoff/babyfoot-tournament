@@ -523,6 +523,50 @@ async def respond_to_invitation(
     
     return crud.respond_to_team_invitation(db, player_id=player_id, accept=accept)
 
+@app.post("/api/tournaments/{tournament_id}/check-completed", status_code=status.HTTP_200_OK)
+async def check_tournament_completed_endpoint(
+    tournament_id: int, 
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_tournament = crud.get_tournament(db, tournament_id=tournament_id)
+        if db_tournament is None:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        
+        # Vérifier que l'utilisateur est le propriétaire du tournoi ou un admin
+        if db_tournament.owner_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+        # Auto-valider les matchs vides ou avec une seule équipe
+        crud.auto_validate_empty_matches(db, tournament_id)
+        
+        # Vérifier si le tournoi est terminé
+        is_completed = crud.check_tournament_completed(db, tournament_id)
+        
+        # Récupérer le statut mis à jour du tournoi
+        db_tournament = crud.get_tournament(db, tournament_id=tournament_id)
+        
+        return {
+            "status": db_tournament.status,
+            "is_completed": is_completed,
+            "message": "Tournament status checked successfully"
+        }
+    except HTTPException:
+        # Relancer les exceptions HTTP déjà formatées
+        raise
+    except Exception as e:
+        # Journaliser l'erreur pour le débogage
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error checking tournament status: {str(e)}\n{error_details}")
+        
+        # Renvoyer une erreur plus détaillée
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error checking tournament status: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

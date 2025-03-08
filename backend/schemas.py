@@ -15,8 +15,7 @@ class Player(PlayerBase):
     id: int
     team_id: int
     user_id: Optional[int] = None
-    goals: int = 0
-    assists: int = 0
+    wins: int = 0
 
     class Config:
         orm_mode = True
@@ -31,6 +30,7 @@ class TeamCreate(TeamBase):
 class Team(TeamBase):
     id: int
     owner_id: int
+    wins: int = 0
     players: List[Player] = []
 
     class Config:
@@ -107,15 +107,11 @@ class ScoreboardTeam(BaseModel):
     id: int
     name: str
     wins: int
-    losses: int
-    points: int
 
 class ScoreboardPlayer(BaseModel):
     id: int
     name: str
-    team: str
-    goals: int
-    assists: int
+    wins: int
 
 # Schéma pour Token
 class Token(BaseModel):

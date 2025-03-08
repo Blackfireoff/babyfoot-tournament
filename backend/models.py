@@ -29,6 +29,7 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
+    wins = Column(Integer, default=0)
 
     # Relations
     owner = relationship("User", back_populates="teams")
@@ -42,8 +43,7 @@ class Player(Base):
     name = Column(String, index=True)
     is_starter = Column(Boolean, default=False)
     team_id = Column(Integer, ForeignKey("teams.id"))
-    goals = Column(Integer, default=0)
-    assists = Column(Integer, default=0)
+    wins = Column(Integer, default=0)
     status = Column(String, default="active")  # 'active', 'pending', 'declined'
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 

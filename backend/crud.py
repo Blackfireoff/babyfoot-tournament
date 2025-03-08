@@ -357,6 +357,9 @@ def start_tournament(db: Session, tournament_id: int):
         # Commit final pour s'assurer que toutes les modifications sont enregistrées
         db.commit()
         
+        # Auto-valider tous les matchs qui n'ont pas d'équipes ou une seule équipe
+        auto_validate_empty_matches(db, tournament_id)
+        
         # Vérifier si le tournoi est terminé après la création des matchs
         check_tournament_completed(db, tournament_id)
         
@@ -367,6 +370,31 @@ def start_tournament(db: Session, tournament_id: int):
         # En cas d'erreur, annuler les modifications et relancer l'exception
         db.rollback()
         raise ValueError(f"Error starting tournament: {str(e)}")
+
+def auto_validate_empty_matches(db: Session, tournament_id: int):
+    """
+    Auto-valide tous les matchs d'un tournoi qui n'ont pas d'équipes ou une seule équipe.
+    """
+    # Récupérer tous les matchs du tournoi
+    all_matches = db.query(models.Match).filter(models.Match.tournament_id == tournament_id).all()
+    
+    for match in all_matches:
+        # Si le match n'a pas de scores (n'est pas déjà validé)
+        if match.team1_score is None or match.team2_score is None:
+            # Cas 1: Match avec une seule équipe
+            if (match.team1_id and not match.team2_id):
+                match.team1_score = 1
+                match.team2_score = 0
+            elif (not match.team1_id and match.team2_id):
+                match.team1_score = 0
+                match.team2_score = 1
+            # Cas 2: Match sans équipes
+            elif not match.team1_id and not match.team2_id:
+                match.team1_score = 0
+                match.team2_score = 0
+    
+    # Commit pour s'assurer que les scores sont mis à jour
+    db.commit()
 
 # Opérations CRUD pour les matchs
 def get_match(db: Session, match_id: str):
@@ -416,6 +444,17 @@ def update_match_score(db: Session, match_id: str, team1_score: int, team2_score
         winning_team_id = db_match.team1_id
     elif team2_score > team1_score:
         winning_team_id = db_match.team2_id
+    
+    # Mettre à jour les victoires de l'équipe gagnante et de ses joueurs
+    if winning_team_id:
+        # Mettre à jour les victoires de l'équipe
+        winning_team = db.query(models.Team).filter(models.Team.id == winning_team_id).first()
+        if winning_team:
+            winning_team.wins += 1
+            
+            # Mettre à jour les victoires des joueurs de l'équipe
+            for player in winning_team.players:
+                player.wins += 1
     
     # Si un gagnant est déterminé, le propager au tour suivant
     if winning_team_id:
@@ -470,19 +509,20 @@ def update_match_score(db: Session, match_id: str, team1_score: int, team2_score
     db.commit()
     db.refresh(db_match)
     
-    # Vérifier si le tournoi est terminé après la mise à jour du score
-    check_tournament_completed(db, db_match.tournament_id)
-    
     return db_match
 
 def check_tournament_completed(db: Session, tournament_id: int):
     """
     Vérifie si tous les matchs d'un tournoi sont terminés et met à jour le statut du tournoi en conséquence.
-    Un tournoi est considéré comme terminé si tous les matchs ont des scores.
+    Un tournoi est considéré comme terminé si tous les matchs ont des scores ou n'ont pas d'équipes assignées.
     """
     # Récupérer le tournoi
     db_tournament = db.query(models.Tournament).filter(models.Tournament.id == tournament_id).first()
-    if db_tournament is None or db_tournament.status != "in_progress":
+    if db_tournament is None:
+        return False
+    
+    # Si le tournoi n'est pas en cours ou n'est pas en train d'être démarré, ne rien faire
+    if db_tournament.status != "in_progress":
         return False
     
     # Récupérer tous les matchs du tournoi
@@ -492,23 +532,22 @@ def check_tournament_completed(db: Session, tournament_id: int):
     if not all_matches:
         return False
     
-    # Vérifier si tous les matchs ont des scores
+    # Vérifier si tous les matchs sont terminés ou n'ont pas d'équipes assignées
     for match in all_matches:
-        # Si un match n'a pas de score et a des équipes assignées, le tournoi n'est pas terminé
-        if (match.team1_score is None or match.team2_score is None) and (match.team1_id is not None or match.team2_id is not None):
+        # Un match est considéré comme terminé si:
+        # 1. Il a des scores (match joué)
+        # 2. OU il n'a pas d'équipes assignées (match qui ne sera jamais joué)
+        # 3. OU il n'a qu'une seule équipe (match gagné par forfait)
+        
+        has_scores = match.team1_score is not None and match.team2_score is not None
+        has_no_teams = match.team1_id is None and match.team2_id is None
+        has_one_team_only = (match.team1_id is not None and match.team2_id is None) or (match.team1_id is None and match.team2_id is not None)
+        
+        # Si le match n'est ni terminé, ni vide, ni avec une seule équipe, alors le tournoi n'est pas terminé
+        if not (has_scores or has_no_teams or has_one_team_only):
             return False
     
-    # Trouver le match final (celui avec le round le plus élevé)
-    max_round = max(match.round for match in all_matches)
-    final_matches = [match for match in all_matches if match.round == max_round]
-    
-    # Vérifier si le match final a un score
-    for final_match in final_matches:
-        if final_match.team1_id is not None or final_match.team2_id is not None:
-            if final_match.team1_score is None or final_match.team2_score is None:
-                return False
-    
-    # Si tous les matchs sont terminés, mettre à jour le statut du tournoi
+    # Si tous les matchs sont terminés ou n'ont pas d'équipes assignées, mettre à jour le statut du tournoi
     db_tournament.status = "closed"
     db.commit()
     return True
@@ -519,48 +558,14 @@ def get_team_rankings(db: Session):
     rankings = []
     
     for team in teams:
-        wins = 0
-        losses = 0
-        
-        # Compter les victoires et défaites en tant qu'équipe 1
-        team1_matches = db.query(models.Match).filter(
-            models.Match.team1_id == team.id,
-            models.Match.team1_score != None,
-            models.Match.team2_score != None
-        ).all()
-        
-        for match in team1_matches:
-            if match.team1_score > match.team2_score:
-                wins += 1
-            else:
-                losses += 1
-        
-        # Compter les victoires et défaites en tant qu'équipe 2
-        team2_matches = db.query(models.Match).filter(
-            models.Match.team2_id == team.id,
-            models.Match.team1_score != None,
-            models.Match.team2_score != None
-        ).all()
-        
-        for match in team2_matches:
-            if match.team2_score > match.team1_score:
-                wins += 1
-            else:
-                losses += 1
-        
-        # Calculer les points (3 points par victoire)
-        points = wins * 3
-        
         rankings.append({
             "id": team.id,
             "name": team.name,
-            "wins": wins,
-            "losses": losses,
-            "points": points
+            "wins": team.wins
         })
     
-    # Trier par points (décroissant)
-    rankings.sort(key=lambda x: x["points"], reverse=True)
+    # Trier par victoires (décroissant)
+    rankings.sort(key=lambda x: x["wins"], reverse=True)
     return rankings
 
 def get_player_rankings(db: Session):
@@ -568,19 +573,17 @@ def get_player_rankings(db: Session):
     rankings = []
     
     for player in players:
-        team_name = player.team.name if player.team else "Sans équipe"
-        
         rankings.append({
             "id": player.id,
             "name": player.name,
-            "team": team_name,
-            "goals": player.goals,
-            "assists": player.assists
+            "wins": player.wins
         })
     
-    # Trier par buts (décroissant)
-    rankings.sort(key=lambda x: x["goals"], reverse=True)
-    return rankings
+    # Trier par nombre de victoires (décroissant)
+    rankings.sort(key=lambda x: x["wins"], reverse=True)
+    
+    # Limiter aux 10 meilleurs joueurs
+    return rankings[:10]
 
 # Opérations pour les matchs d'un utilisateur
 def get_user_matches(db: Session, user_id: int):

@@ -308,6 +308,15 @@ export const tournamentService = {
     return handleResponse(response);
   },
 
+  // Vérifier si un tournoi est terminé
+  checkTournamentCompleted: async (tournamentId) => {
+    const response = await fetch(`${API_URL}/tournaments/${tournamentId}/check-completed`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
   // Récupérer les matchs d'un tournoi
   getTournamentMatches: async (tournamentId) => {
     const response = await fetch(`${API_URL}/tournaments/${tournamentId}/matches`, {
