@@ -31,6 +31,7 @@ class Team(TeamBase):
     id: int
     owner_id: int
     wins: int = 0
+    tournaments_won: int = 0
     players: List[Player] = []
 
     class Config:
@@ -107,6 +108,7 @@ class ScoreboardTeam(BaseModel):
     id: int
     name: str
     wins: int
+    tournaments_won: int = 0
 
 class ScoreboardPlayer(BaseModel):
     id: int

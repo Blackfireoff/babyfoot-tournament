@@ -580,6 +580,32 @@ def check_tournament_completed(db: Session, tournament_id: int):
     
     # Si tous les matchs sont terminés ou n'ont pas d'équipes assignées, mettre à jour le statut du tournoi
     db_tournament.status = "closed"
+    
+    # Identifier le gagnant du tournoi (le gagnant du dernier match)
+    # Trouver le match avec le round le plus élevé
+    final_matches = sorted(all_matches, key=lambda m: (m.round, -m.match_number), reverse=True)
+    
+    if final_matches:
+        final_match = final_matches[0]
+        
+        # Vérifier si le match final a des scores
+        if final_match.team1_score is not None and final_match.team2_score is not None:
+            # Déterminer l'équipe gagnante
+            winning_team_id = None
+            if final_match.team1_score > final_match.team2_score:
+                winning_team_id = final_match.team1_id
+            elif final_match.team2_score > final_match.team1_score:
+                winning_team_id = final_match.team2_id
+            
+            # Mettre à jour les statistiques de l'équipe gagnante
+            if winning_team_id:
+                winning_team = db.query(models.Team).filter(models.Team.id == winning_team_id).first()
+                if winning_team:
+                    # Ajouter une victoire supplémentaire pour avoir gagné le tournoi
+                    winning_team.wins += 1
+                    # Incrémenter le compteur de tournois gagnés
+                    winning_team.tournaments_won += 1
+    
     db.commit()
     return True
 
@@ -592,11 +618,12 @@ def get_team_rankings(db: Session):
         rankings.append({
             "id": team.id,
             "name": team.name,
-            "wins": team.wins
+            "wins": team.wins,
+            "tournaments_won": team.tournaments_won
         })
     
     # Trier par victoires (décroissant)
-    rankings.sort(key=lambda x: x["wins"], reverse=True)
+    rankings.sort(key=lambda x: (x["wins"], x["tournaments_won"]), reverse=True)
     return rankings
 
 def get_player_rankings(db: Session):

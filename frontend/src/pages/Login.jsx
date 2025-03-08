@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, error: authError } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -12,6 +13,15 @@ function Login() {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Vérifier si un message d'erreur est passé via l'état de la navigation
+  useEffect(() => {
+    if (location.state?.error) {
+      setError(location.state.error);
+      // Effacer l'état pour éviter que le message persiste après un rafraîchissement
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

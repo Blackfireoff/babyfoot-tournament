@@ -56,18 +56,22 @@ function TeamProfile() {
 
           // Calculer les statistiques
           const matchesPlayed = matchesData.length;
-          const wins = matchesData.filter(match => {
+          const matchWins = matchesData.filter(match => {
             const isTeam1 = match.team1_id === parseInt(teamId);
             return isTeam1 
               ? match.team1_score > match.team2_score 
               : match.team2_score > match.team1_score;
           }).length;
           
+          // Utiliser les victoires totales de l'équipe (incluant les tournois gagnés)
+          // au lieu de calculer uniquement à partir des matchs
+          const totalWins = teamData.wins;
+          
           setStats({
             matchesPlayed,
-            wins,
-            losses: matchesPlayed - wins,
-            winRate: matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0
+            wins: totalWins,
+            losses: matchesPlayed - matchWins,
+            winRate: matchesPlayed > 0 ? Math.round((matchWins / matchesPlayed) * 100) : 0
           });
         } catch (err) {
           console.error('Error fetching team matches:', err);
@@ -172,13 +176,13 @@ function TeamProfile() {
             <h3 className="text-lg font-medium leading-6 text-gray-900">
               Statistiques
             </h3>
-            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <div className="bg-gray-50 overflow-hidden shadow rounded-lg">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <svg className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
                     <div className="ml-5 w-0 flex-1">
@@ -210,6 +214,28 @@ function TeamProfile() {
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
                           {stats.wins}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">
+                          Tournois gagnés
+                        </dt>
+                        <dd className="text-lg font-medium text-gray-900">
+                          {team ? team.tournaments_won : 0}
                         </dd>
                       </dl>
                     </div>

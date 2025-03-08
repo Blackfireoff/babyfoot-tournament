@@ -65,6 +65,18 @@ const decodeToken = () => {
   }
 };
 
+// Fonction pour vérifier si le token est expiré
+const isTokenExpired = () => {
+  const decoded = decodeToken();
+  if (!decoded || !decoded.exp) return true;
+  
+  // La date d'expiration est en secondes, convertir en millisecondes
+  const expirationTime = decoded.exp * 1000;
+  const currentTime = Date.now();
+  
+  return currentTime >= expirationTime;
+};
+
 // Service d'authentification
 export const authService = {
   // Inscription d'un nouvel utilisateur
@@ -103,11 +115,27 @@ export const authService = {
 
   // Vérifier si l'utilisateur est connecté
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    const hasToken = !!localStorage.getItem('token');
+    if (!hasToken) return false;
+    
+    // Vérifier si le token est expiré
+    if (isTokenExpired()) {
+      // Si le token est expiré, déconnecter l'utilisateur
+      localStorage.removeItem('token');
+      return false;
+    }
+    
+    return true;
   },
   
   // Obtenir le nom d'utilisateur à partir du token
   getUsername: () => {
+    // Vérifier d'abord si le token est expiré
+    if (isTokenExpired()) {
+      localStorage.removeItem('token');
+      return null;
+    }
+    
     const decoded = decodeToken();
     return decoded ? decoded.sub : null;
   }

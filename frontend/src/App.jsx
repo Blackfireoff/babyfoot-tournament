@@ -53,6 +53,13 @@ function App() {
     }
     
     if (!user) {
+      // Vérifier si le token existe mais est expiré
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Si un token existe mais l'utilisateur n'est pas authentifié, c'est que la session a expiré
+        // Afficher un message d'erreur via une redirection avec state
+        return <Navigate to="/login" state={{ error: "Votre session a expiré. Veuillez vous reconnecter." }} />;
+      }
       return <Navigate to="/login" />;
     }
     
@@ -219,7 +226,11 @@ function App() {
             />
             <Route
               path="/scoreboard"
-              element={<Scoreboard />}
+              element={
+                <ProtectedRoute>
+                  <Scoreboard />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/notifications"
@@ -239,11 +250,28 @@ function App() {
             />
             <Route
               path="/players/:playerId"
-              element={<PlayerProfile />}
+              element={
+                <ProtectedRoute>
+                  <PlayerProfile />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/teams/:teamId"
-              element={<TeamProfile />}
+              element={
+                <ProtectedRoute>
+                  <TeamProfile />
+                </ProtectedRoute>
+              }
+            />
+            {/* Route par défaut pour rediriger vers login si non authentifié */}
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/teams" />
+                </ProtectedRoute>
+              }
             />
           </Routes>
         )}
