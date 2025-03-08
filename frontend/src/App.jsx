@@ -14,6 +14,7 @@ import CreateTournament from './pages/CreateTournament';
 import Scoreboard from './pages/Scoreboard';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
+import PlayerProfile from './pages/PlayerProfile';
 
 function App() {
   const { user, logout, loading } = useAuth();
@@ -205,6 +206,10 @@ function App() {
                   <Profile />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/players/:playerId"
+              element={<PlayerProfile />}
             />
           </Routes>
         )}

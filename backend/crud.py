@@ -88,6 +88,18 @@ def get_player(db: Session, player_id: int):
 def get_team_players(db: Session, team_id: int):
     return db.query(models.Player).filter(models.Player.team_id == team_id).all()
 
+def get_player_teams(db: Session, player_id: int):
+    player = db.query(models.Player).filter(models.Player.id == player_id).first()
+    if not player:
+        return []
+    
+    # Récupérer l'équipe du joueur
+    team = db.query(models.Team).filter(models.Team.id == player.team_id).first()
+    if not team:
+        return []
+    
+    return [team]
+
 def create_player(db: Session, player: schemas.PlayerCreate, team_id: int):
     db_player = models.Player(**player.dict(), team_id=team_id)
     db.add(db_player)

@@ -223,6 +223,22 @@ export const teamService = {
       body: JSON.stringify({ accept })
     });
     return handleResponse(response);
+  },
+
+  // Récupérer un joueur par son ID
+  getPlayerById: async (playerId) => {
+    const response = await fetch(`${API_URL}/players/${playerId}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Récupérer les équipes d'un joueur
+  getPlayerTeams: async (playerId) => {
+    const response = await fetch(`${API_URL}/players/${playerId}/teams`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
   }
 };
 

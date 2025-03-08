@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { teamService, userService } from '../services/api';
+import { Link } from 'react-router-dom';
 
 function Teams() {
   const [teams, setTeams] = useState([]);
@@ -312,7 +313,12 @@ function Teams() {
                                   : 'bg-gray-300'
                             }`}></div>
                             <span className={player.is_starter ? 'font-medium text-gray-900' : 'text-gray-600'}>
-                              {player.name}
+                              <Link 
+                                to={`/players/${player.id}`}
+                                className="hover:text-blue-600 hover:underline"
+                              >
+                                {player.name}
+                              </Link>
                               {player.is_starter && ' (Titulaire)'}
                               {player.status === "pending" && ' (En attente)'}
                             </span>

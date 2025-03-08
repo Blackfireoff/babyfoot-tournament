@@ -519,9 +519,27 @@ async def respond_to_invitation(
         raise HTTPException(status_code=404, detail="Player not found")
     
     if player.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise HTTPException(status_code=403, detail="Not authorized to respond to this invitation")
     
     return crud.respond_to_team_invitation(db, player_id=player_id, accept=accept)
+
+@app.get("/api/players/{player_id}", response_model=schemas.Player)
+async def get_player(
+    player_id: int,
+    db: Session = Depends(get_db)
+):
+    player = crud.get_player(db, player_id=player_id)
+    if player is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
+
+@app.get("/api/players/{player_id}/teams", response_model=List[schemas.Team])
+async def get_player_teams(
+    player_id: int,
+    db: Session = Depends(get_db)
+):
+    teams = crud.get_player_teams(db, player_id=player_id)
+    return teams
 
 @app.post("/api/tournaments/{tournament_id}/check-completed", status_code=status.HTTP_200_OK)
 async def check_tournament_completed_endpoint(
