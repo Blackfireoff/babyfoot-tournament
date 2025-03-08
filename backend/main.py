@@ -400,14 +400,29 @@ async def get_user_profile(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return db_user
+    # Si l'utilisateur demande ses propres informations, renvoyer toutes les informations
+    if user_id == current_user.id:
+        return db_user
+    
+    # Pour les autres utilisateurs, vérifier si l'utilisateur est propriétaire d'une équipe
+    # Si oui, renvoyer uniquement les informations de base (non sensibles)
+    teams = crud.get_user_teams(db, user_id=user_id)
+    if teams:
+        # Créer un nouvel objet User avec les informations de base
+        return schemas.User(
+            id=db_user.id,
+            username=db_user.username,
+            email="",  # Ne pas exposer l'email
+            is_admin=db_user.is_admin,
+            teams=[]
+        )
+    
+    # Si l'utilisateur n'est pas propriétaire d'une équipe, refuser l'accès
+    raise HTTPException(status_code=403, detail="Not enough permissions")
 
 @app.get("/api/users/{user_id}/matches")
 async def get_user_matches(
