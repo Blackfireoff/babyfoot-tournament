@@ -125,7 +125,13 @@ function Scoreboard() {
                         Équipe
                       </th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        Matchs joués
+                      </th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Victoires
+                      </th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        Défaites
                       </th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Tournois gagnés
@@ -147,7 +153,13 @@ function Scoreboard() {
                           </Link>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {team.wins + team.losses}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {team.wins}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {team.losses}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {team.tournaments_won}

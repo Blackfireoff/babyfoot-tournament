@@ -43,13 +43,19 @@ function Profile() {
 
       // Calculer les statistiques
       const victories = matchesData.filter(match => {
-        const isTeam1 = match.team1Id === user.id;
-        return isTeam1 ? match.team1Score > match.team2Score : match.team2Score > match.team1Score;
+        if (match.user_is_team1) {
+          return match.team1_score > match.team2_score;
+        } else {
+          return match.team2_score > match.team1_score;
+        }
       }).length;
 
       const pointsScored = matchesData.reduce((total, match) => {
-        const isTeam1 = match.team1Id === user.id;
-        return total + (isTeam1 ? match.team1Score : match.team2Score);
+        if (match.user_is_team1) {
+          return total + (match.team1_score || 0);
+        } else {
+          return total + (match.team2_score || 0);
+        }
       }, 0);
 
       setStats({

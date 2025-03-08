@@ -486,6 +486,19 @@ def update_match_score(db: Session, match_id: str, team1_score: int, team2_score
             # Mettre à jour les victoires des joueurs de l'équipe
             for player in winning_team.players:
                 player.wins += 1
+        
+        # Mettre à jour les défaites de l'équipe perdante
+        losing_team_id = None
+        if has_team1 and has_team2:
+            if winning_team_id == db_match.team1_id:
+                losing_team_id = db_match.team2_id
+            else:
+                losing_team_id = db_match.team1_id
+            
+            if losing_team_id:
+                losing_team = db.query(models.Team).filter(models.Team.id == losing_team_id).first()
+                if losing_team:
+                    losing_team.losses += 1
     
     # Si un gagnant est déterminé, le propager au tour suivant
     if winning_team_id:
@@ -592,10 +605,13 @@ def check_tournament_completed(db: Session, tournament_id: int):
         if final_match.team1_score is not None and final_match.team2_score is not None:
             # Déterminer l'équipe gagnante
             winning_team_id = None
+            losing_team_id = None
             if final_match.team1_score > final_match.team2_score:
                 winning_team_id = final_match.team1_id
+                losing_team_id = final_match.team2_id
             elif final_match.team2_score > final_match.team1_score:
                 winning_team_id = final_match.team2_id
+                losing_team_id = final_match.team1_id
             
             # Mettre à jour les statistiques de l'équipe gagnante
             if winning_team_id:
@@ -605,6 +621,13 @@ def check_tournament_completed(db: Session, tournament_id: int):
                     winning_team.wins += 1
                     # Incrémenter le compteur de tournois gagnés
                     winning_team.tournaments_won += 1
+            
+            # Mettre à jour les statistiques de l'équipe perdante (finaliste)
+            if losing_team_id:
+                losing_team = db.query(models.Team).filter(models.Team.id == losing_team_id).first()
+                if losing_team:
+                    # Ajouter une défaite supplémentaire pour avoir perdu la finale
+                    losing_team.losses += 1
     
     db.commit()
     return True
@@ -619,6 +642,7 @@ def get_team_rankings(db: Session):
             "id": team.id,
             "name": team.name,
             "wins": team.wins,
+            "losses": team.losses,
             "tournaments_won": team.tournaments_won
         })
     
@@ -658,23 +682,37 @@ def get_user_matches(db: Session, user_id: int):
     result = []
     for match in matches:
         tournament = db.query(models.Tournament).filter(models.Tournament.id == match.tournament_id).first()
+        if not tournament:
+            continue  # Skip if tournament doesn't exist
+            
         team1 = db.query(models.Team).filter(models.Team.id == match.team1_id).first()
         team2 = db.query(models.Team).filter(models.Team.id == match.team2_id).first()
         
+        # Skip if either team doesn't exist
+        if not team1 or not team2:
+            continue
+            
         # Déterminer l'équipe de l'utilisateur et l'adversaire
         if match.team1_id in user_team_ids:
             user_team = team1
             opponent = team2
+            user_is_team1 = True
         else:
             user_team = team2
             opponent = team1
+            user_is_team1 = False
         
         result.append({
             "id": match.id,
             "tournament": tournament.name,
             "opponent": opponent.name,
             "date": tournament.date,
-            "team": user_team.name
+            "team": user_team.name,
+            "team1_id": match.team1_id,
+            "team2_id": match.team2_id,
+            "team1_score": match.team1_score,
+            "team2_score": match.team2_score,
+            "user_is_team1": user_is_team1
         })
     
     return result

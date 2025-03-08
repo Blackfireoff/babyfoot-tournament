@@ -30,6 +30,7 @@ class Team(Base):
     name = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     wins = Column(Integer, default=0)
+    losses = Column(Integer, default=0)
     tournaments_won = Column(Integer, default=0)
 
     # Relations

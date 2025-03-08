@@ -54,28 +54,50 @@ function TeamProfile() {
           const matchesData = await teamService.getTeamMatches(teamId);
           setMatches(matchesData);
 
-          // Calculer les statistiques
-          const matchesPlayed = matchesData.length;
-          const matchWins = matchesData.filter(match => {
-            const isTeam1 = match.team1_id === parseInt(teamId);
-            return isTeam1 
-              ? match.team1_score > match.team2_score 
-              : match.team2_score > match.team1_score;
-          }).length;
+          // Utiliser directement les statistiques de l'équipe pour garantir la cohérence
+          const tournamentsWon = teamData.tournaments_won || 0;
+          let wins = teamData.wins || 0;
+          let losses = teamData.losses || 0;
           
-          // Utiliser les victoires totales de l'équipe (incluant les tournois gagnés)
-          // au lieu de calculer uniquement à partir des matchs
-          const totalWins = teamData.wins;
+          // S'assurer que le nombre de victoires est au moins égal au nombre de tournois gagnés
+          if (tournamentsWon > 0 && wins < tournamentsWon) {
+            wins = tournamentsWon; // Au minimum, une équipe a autant de victoires que de tournois gagnés
+          }
+          
+          // Calculer le nombre total de matchs joués (victoires + défaites)
+          const matchesPlayed = wins + losses;
           
           setStats({
             matchesPlayed,
-            wins: totalWins,
-            losses: matchesPlayed - matchWins,
-            winRate: matchesPlayed > 0 ? Math.round((matchWins / matchesPlayed) * 100) : 0
+            wins: wins,
+            losses: losses,
+            winRate: matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0
           });
         } catch (err) {
           console.error('Error fetching team matches:', err);
           setMatches([]);
+          
+          // En cas d'erreur, utiliser quand même les statistiques de base de l'équipe
+          if (teamData) {
+            const tournamentsWon = teamData.tournaments_won || 0;
+            let wins = teamData.wins || 0;
+            let losses = teamData.losses || 0;
+            
+            // S'assurer que le nombre de victoires est au moins égal au nombre de tournois gagnés
+            if (tournamentsWon > 0 && wins < tournamentsWon) {
+              wins = tournamentsWon;
+            }
+            
+            // Calculer le nombre total de matchs joués
+            const matchesPlayed = wins + losses;
+            
+            setStats({
+              matchesPlayed,
+              wins: wins,
+              losses: losses,
+              winRate: matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0
+            });
+          }
         }
       } catch (err) {
         console.error('Error fetching team data:', err);
