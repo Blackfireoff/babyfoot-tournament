@@ -59,6 +59,23 @@ function App() {
     return children;
   };
 
+  // Fonction pour rediriger les utilisateurs connectés
+  const RedirectIfAuthenticated = ({ children }) => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+    
+    if (user) {
+      return <Navigate to="/teams" />;
+    }
+    
+    return children;
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Navigation */}
@@ -67,7 +84,7 @@ function App() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link to="/" className="text-xl font-bold text-gray-800">
+                <Link to={user ? "/teams" : "/"} className="text-xl font-bold text-gray-800">
                   BabyFoot Tournaments
                 </Link>
               </div>
@@ -153,9 +170,21 @@ function App() {
           </div>
         ) : (
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/" element={
+              <RedirectIfAuthenticated>
+                <Home />
+              </RedirectIfAuthenticated>
+            } />
+            <Route path="/login" element={
+              <RedirectIfAuthenticated>
+                <Login />
+              </RedirectIfAuthenticated>
+            } />
+            <Route path="/register" element={
+              <RedirectIfAuthenticated>
+                <Register />
+              </RedirectIfAuthenticated>
+            } />
             <Route
               path="/teams"
               element={
